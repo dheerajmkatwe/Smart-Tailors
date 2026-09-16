@@ -141,7 +141,7 @@ export default function App() {
       />
       <Routes>
         {/* SuperAdmin Control Panel Route */}
-        <Route path="/admin" element={<SuperAdmin />} />
+        <Route path="/developerhubhai" element={<SuperAdmin />} />
 
         {/* Public Customer Order Tracker — no login required */}
         <Route path="/track/:orderId" element={<TrackOrder />} />
