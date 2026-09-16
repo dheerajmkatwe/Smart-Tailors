@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Store, User, Phone, MapPin, CreditCard, Landmark, Users, Plus, Trash2, Save, Scissors, Crown, Key, Gift, Calendar, Sparkles, AlertCircle, Edit, X } from 'lucide-react';
+import { Store, User, Phone, MapPin, CreditCard, Landmark, Users, Plus, Trash2, Save, Scissors, Crown, Key, Gift, Calendar, Sparkles, AlertCircle, Edit, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 
@@ -285,19 +285,38 @@ export default function BoutiqueSettings({ onMenuClick }) {
                         </div>
 
                         <div className="form-group mb-16">
-                            <label className="form-label">Shop Logo <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(Displays on invoices & sidebar)</span></label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <label className="form-label" style={{ marginBottom: 12 }}>Shop Logo <span style={{ fontWeight: 400, color: 'var(--gray)' }}>(Displays on invoices & sidebar)</span></label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: '#fafafa', padding: '16px', borderRadius: '12px', border: '1px dashed #d9d9d9' }}>
                                 {profile.shop_logo ? (
                                     <div style={{ position: 'relative' }}>
-                                        <img src={profile.shop_logo} alt="Logo" style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid #ddd' }} />
-                                        <button type="button" onClick={() => setProfile(prev => ({ ...prev, shop_logo: '' }))} style={{ position: 'absolute', top: -6, right: -6, background: '#ef5350', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <X size={12} />
+                                        <img src={profile.shop_logo} alt="Logo" style={{ width: 68, height: 68, borderRadius: '10px', objectFit: 'cover', border: '2px solid rgba(198,167,94,0.4)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setProfile(prev => ({ ...prev, shop_logo: '' }))} 
+                                            style={{ position: 'absolute', top: -8, right: -8, background: '#ef5350', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.15)' }}
+                                        >
+                                            <X size={13} />
                                         </button>
                                     </div>
                                 ) : (
-                                    <div style={{ width: 60, height: 60, borderRadius: '8px', background: '#f5f5f7', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 11 }}>No Logo</div>
+                                    <div style={{ width: 68, height: 68, borderRadius: '10px', background: '#f0f0f0', border: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa' }}>
+                                        <Store size={26} style={{ opacity: 0.6 }} />
+                                    </div>
                                 )}
-                                <input type="file" accept="image/*" onChange={handleLogoUploadSettings} style={{ fontSize: '12px' }} />
+                                <div style={{ flex: 1 }}>
+                                    <input id="logo-upload-settings" type="file" accept="image/*" onChange={handleLogoUploadSettings} style={{ display: 'none' }} />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => document.getElementById('logo-upload-settings').click()}
+                                        style={{ background: 'rgba(198,167,94,0.1)', border: '1px solid rgba(198,167,94,0.3)', color: 'var(--maroon-dark)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all 0.2s', fontFamily: 'inherit' }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(198,167,94,0.2)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(198,167,94,0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                    >
+                                        <Upload size={16} />
+                                        {profile.shop_logo ? 'Change Photo' : 'Upload Photo'}
+                                    </button>
+                                    <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--gray)' }}>Max size: 2MB. Square image recommended.</p>
+                                </div>
                             </div>
                         </div>
 
