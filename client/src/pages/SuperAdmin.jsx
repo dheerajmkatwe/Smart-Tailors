@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Mail, Users, ShoppingBag, Store, LogOut, Search, MapPin, Hash, UserCheck, Calendar, CreditCard, Gift, Copy, Send, CheckCircle, Info, X, Trash2, Ban, ShieldAlert } from 'lucide-react';
+import { Lock, Mail, Users, ShoppingBag, Store, LogOut, Search, MapPin, Hash, UserCheck, Calendar, CreditCard, Gift, Copy, Send, CheckCircle, Info, X, Trash2, Ban, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 
@@ -11,6 +11,7 @@ export default function SuperAdmin() {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Dashboard states
@@ -274,7 +275,7 @@ export default function SuperAdmin() {
                             }}>
                                 <Lock size={18} style={{ color: '#6c6c8c' }} />
                                 <input
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     placeholder="Enter access key"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
@@ -284,6 +285,13 @@ export default function SuperAdmin() {
                                         fontSize: '14px', flex: 1
                                     }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{ background: 'none', border: 'none', color: '#6c6c8c', cursor: 'pointer', padding: 0, display: 'flex' }}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
                         </div>
 
