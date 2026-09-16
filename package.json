@@ -1,0 +1,7 @@
+{
+  "name": "smart-tailors-monorepo",
+  "version": "1.0.0",
+  "scripts": {
+    "vercel-build": "cd server && npm install && cd ../client && npm install && npm run build"
+  }
+}
