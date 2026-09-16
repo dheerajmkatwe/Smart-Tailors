@@ -612,8 +612,8 @@ router.post('/super-admin/login', async (req, res) => {
             return res.status(400).json({ error: 'Username and password are required' });
         }
 
-        const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'developerhubhai01';
-        const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'developerhubhai01';
+        const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'developerhubhai';
+        const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'developerhubhai';
 
         if (!superAdminEmail || !superAdminPassword) {
             return res.status(500).json({ error: 'Super Admin credentials are not configured on the server.' });
