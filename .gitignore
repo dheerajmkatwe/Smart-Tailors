@@ -1,0 +1,30 @@
+node_modules/
+.env
+*.db
+*.db-journal
+.DS_Store
+dist/
+dist-ssr/
+*.local
+
+# Google Service Account keys - never commit these
+*-credentials.json
+lm-tailor-*.json
+
+# Local project context (contains credentials)
+project_context.md
+
+# Backups
+*.csv
+*backup*.json
+*backup*.xml
+*.xlsx
+~$*.xlsx
+
+# Local Documentation & Resumes
+future_features.txt
+interview_questions.md
+about_project.md
+update_new.txt
+*resume*
+server/export-cloud-backup.js
