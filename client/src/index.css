@@ -84,7 +84,7 @@ html {
   text-rendering: optimizeLegibility;
   /* Prevent font scaling in landscape on iOS */
   -webkit-text-size-adjust: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -92,7 +92,7 @@ body {
   background: var(--ivory);
   color: var(--charcoal);
   line-height: 1.6;
-  overflow-x: hidden;
+  overflow-x: clip;
   font-size: 15px;
 }
 
@@ -111,7 +111,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   min-height: 100vh;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .main-content {
@@ -122,7 +122,7 @@ img { display: block; max-width: 100%; }
   transition: margin-left var(--t-slow);
   position: relative;
   /* Prevent any child from causing horizontal scroll */
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
@@ -130,7 +130,7 @@ img { display: block; max-width: 100%; }
   padding: 16px 24px 16px;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────────── */
