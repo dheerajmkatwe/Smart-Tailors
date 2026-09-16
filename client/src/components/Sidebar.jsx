@@ -93,7 +93,7 @@ export default function Sidebar({ isOpen, onClose, auth, setAuth }) {
             {/* Logo */}
             <div className="sidebar-logo">
                 {auth?.shop_logo ? (
-                    <img src={auth.shop_logo} alt="Shop Logo" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gold)', background: '#fff' }} />
+                    <img src={auth.shop_logo} alt="Shop Logo" style={{ width: 58, height: 58, margin: '0 auto 10px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gold)', background: '#fff', boxShadow: 'var(--shadow-gold)' }} />
                 ) : (
                     <div className="logo-circle">ST</div>
                 )}

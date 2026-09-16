@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, User, Phone, MapPin, Lock, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle, Scissors, Sparkles, ShieldCheck } from 'lucide-react';
+import { Store, User, Phone, MapPin, Lock, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle, Scissors, Sparkles, ShieldCheck, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 
@@ -307,13 +307,37 @@ export default function Register() {
                                 <label style={{ display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
                                     Shop Logo <span style={{ color: 'rgba(255,255,255,0.25)', fontWeight: 400, textTransform: 'none' }}>(optional)</span>
                                 </label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '14px', border: '1.5px dashed rgba(255,255,255,0.1)' }}>
                                     {formData.shop_logo ? (
-                                        <img src={formData.shop_logo} alt="Logo" style={{ width: 50, height: 50, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+                                        <div style={{ position: 'relative' }}>
+                                            <img src={formData.shop_logo} alt="Logo" style={{ width: 68, height: 68, borderRadius: 12, objectFit: 'cover', border: '2px solid rgba(212,175,55,0.4)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }} />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, shop_logo: '' }))}
+                                                style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, borderRadius: '50%', background: '#ef5350', border: '2px solid #2a0709', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
                                     ) : (
-                                        <div style={{ width: 50, height: 50, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px dashed rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>No Logo</div>
+                                        <div style={{ width: 68, height: 68, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                                            <Store size={26} style={{ opacity: 0.5 }} />
+                                        </div>
                                     )}
-                                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ color: '#fff', fontSize: 13 }} />
+                                    <div style={{ flex: 1 }}>
+                                        <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => document.getElementById('logo-upload').click()}
+                                            style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: '#d4af37', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all 0.2s', fontFamily: 'inherit' }}
+                                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(212,175,55,0.2)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(212,175,55,0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                        >
+                                            <Upload size={16} />
+                                            {formData.shop_logo ? 'Change Photo' : 'Upload Photo'}
+                                        </button>
+                                        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'rgba(255,255,255,0.35)' }}>Max size: 2MB. Square image recommended.</p>
+                                    </div>
                                 </div>
                             </div>
 
