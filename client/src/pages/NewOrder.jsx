@@ -11,7 +11,7 @@ const getAppMode = () => {
     try { return localStorage.getItem('tailor_active_mode') || 'LADIES'; } catch { return 'LADIES'; }
 };
 
-const SERVICE_TYPES_LADIES = ['Blouse', 'Dress', 'Lehenga', 'Chudi', 'Alteration', 'Pico', 'Fall', 'Gonda', 'Krosha Work', 'Other'];
+const SERVICE_TYPES_LADIES = ['Blouse', 'Dress', 'Lehenga', 'Chudi', 'Embroidery', 'Alteration', 'Pico', 'Fall', 'Gonda', 'Krosha Work', 'Other'];
 const SERVICE_TYPES_MENS = ['Shirt', 'Pant', 'Kurta', 'Kurta Pajama', 'Suit', 'Blazer', 'Waistcoat', 'Sherwani', 'Safari Suit', 'Alteration', 'Other'];
 
 const SERVICE_TYPES = getAppMode() === 'MENS' ? SERVICE_TYPES_MENS : SERVICE_TYPES_LADIES;
@@ -34,6 +34,13 @@ const measurementLabelsLadies = {
         { key: 'b_length', label: 'B-Length (BL)' }, { key: 'b_bottom_round', label: 'B-Round (BR)' },
         { key: 'b_hip', label: 'B-Hip (HP)' }, { key: 'b_fly', label: 'B-Fly (FLY)' },
         { key: 'b_thai', label: 'B-Thai' }, { key: 'b_knee', label: 'B-Knee' },
+    ],
+    EMBROIDERY: [
+        { key: 'emb_front_neck', label: 'Front Neck' }, { key: 'emb_back_neck', label: 'Back Neck' },
+        { key: 'emb_sleeves_length', label: 'Sleeves Length' }, { key: 'emb_sleeves_round', label: 'Sleeves Round' },
+        { key: 'emb_work_length', label: 'Work Length' }, { key: 'emb_work_width', label: 'Work Width' },
+        { key: 'emb_shoulder', label: 'Shoulder' }, { key: 'emb_chest', label: 'Chest' },
+        { key: 'emb_dot', label: 'Dot (Apex)' }, { key: 'emb_armhole', label: 'Armhole' },
     ]
 };
 
@@ -495,6 +502,7 @@ export default function NewOrder({ onMenuClick, auth }) {
             chest_distance: '', sleeves_round: '',
             t_length: '', t_shoulder: '', t_chest: '', t_waist: '', t_back_neck: '', t_front_neck: '', t_sleeves_length: '', t_sleeves_round: '', t_half_body: '', t_hip: '',
             b_length: '', b_bottom_round: '', b_hip: '', b_fly: '', b_thai: '', b_knee: '',
+            emb_front_neck: '', emb_back_neck: '', emb_sleeves_length: '', emb_sleeves_round: '', emb_work_length: '', emb_work_width: '', emb_shoulder: '', emb_chest: '', emb_dot: '', emb_armhole: '',
         });
         setExtraMeasurements([]);
         setServices([initialService()]);

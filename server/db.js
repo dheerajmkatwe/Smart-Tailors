@@ -412,6 +412,12 @@ async function initDB() {
       try { await db.execute(`ALTER TABLE measurements ADD COLUMN ${f} REAL`); console.log(`✅ Added ${f} to measurements`); } catch (e) { }
     }
 
+    // EMBROIDERY Measurements
+    const embFields = ['emb_front_neck', 'emb_back_neck', 'emb_sleeves_length', 'emb_sleeves_round', 'emb_work_length', 'emb_work_width', 'emb_shoulder', 'emb_chest', 'emb_dot', 'emb_armhole'];
+    for (const f of embFields) {
+      try { await db.execute(`ALTER TABLE measurements ADD COLUMN ${f} REAL`); console.log(`✅ Added ${f} to measurements`); } catch (e) { }
+    }
+
     // Add extra_measurements column to measurements table
     try {
       await db.execute('ALTER TABLE measurements ADD COLUMN extra_measurements TEXT');

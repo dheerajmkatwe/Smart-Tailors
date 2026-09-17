@@ -21,6 +21,12 @@ const measurementLabelsLadies = {
         t_sleeves_round: 'Round', t_half_body: 'Half Body', t_hip: 'HIP',
         b_length: 'B-Length (BL)', b_bottom_round: 'B-Round (BR)', b_hip: 'B-Hip (HP)',
         b_fly: 'B-Fly (FLY)', b_thai: 'B-Thai', b_knee: 'B-Knee'
+    },
+    EMBROIDERY: {
+        emb_front_neck: 'Front Neck', emb_back_neck: 'Back Neck',
+        emb_sleeves_length: 'Sleeves Length', emb_sleeves_round: 'Sleeves Round',
+        emb_work_length: 'Work Length', emb_work_width: 'Work Width',
+        emb_shoulder: 'Shoulder', emb_chest: 'Chest', emb_dot: 'Dot (Apex)', emb_armhole: 'Armhole'
     }
 };
 

@@ -9,7 +9,9 @@ router.get('/', async (req, res) => {
             SELECT c.*, m.length as m_length, m.shoulder, m.chest, m.waist, m.dot,
             m.back_neck, m.front_neck, m.sleeves_length, m.armhole, m.chest_distance, m.sleeves_round,
             m.t_length, m.t_shoulder, m.t_chest, m.t_waist, m.t_back_neck, m.t_front_neck, m.t_sleeves_length, m.t_sleeves_round, m.t_half_body, m.t_hip,
-            m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee, m.extra_measurements
+            m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee,
+            m.emb_front_neck, m.emb_back_neck, m.emb_sleeves_length, m.emb_sleeves_round, m.emb_work_length, m.emb_work_width, m.emb_shoulder, m.emb_chest, m.emb_dot, m.emb_armhole,
+            m.extra_measurements
             FROM customers c LEFT JOIN measurements m ON m.customer_id = c.id
             WHERE c.tenant_id = ?
             ORDER BY c.created_at DESC
@@ -31,7 +33,9 @@ router.get('/search', async (req, res) => {
             query = `SELECT c.*, m.length as m_length, m.shoulder, m.chest, m.waist, m.dot,
                  m.back_neck, m.front_neck, m.sleeves_length, m.armhole, m.chest_distance, m.sleeves_round,
                  m.t_length, m.t_shoulder, m.t_chest, m.t_waist, m.t_back_neck, m.t_front_neck, m.t_sleeves_length, m.t_sleeves_round, m.t_half_body, m.t_hip,
-                 m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee, m.extra_measurements
+                 m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee,
+                 m.emb_front_neck, m.emb_back_neck, m.emb_sleeves_length, m.emb_sleeves_round, m.emb_work_length, m.emb_work_width, m.emb_shoulder, m.emb_chest, m.emb_dot, m.emb_armhole,
+                 m.extra_measurements
                  FROM customers c LEFT JOIN measurements m ON m.customer_id = c.id
                  WHERE c.tenant_id = ? AND c.phone_number LIKE ? GROUP BY c.id LIMIT 20`;
             args = [req.tenantId, `%${phone}%`];
@@ -39,7 +43,9 @@ router.get('/search', async (req, res) => {
             query = `SELECT c.*, m.length as m_length, m.shoulder, m.chest, m.waist, m.dot,
                  m.back_neck, m.front_neck, m.sleeves_length, m.armhole, m.chest_distance, m.sleeves_round,
                  m.t_length, m.t_shoulder, m.t_chest, m.t_waist, m.t_back_neck, m.t_front_neck, m.t_sleeves_length, m.t_sleeves_round, m.t_half_body, m.t_hip,
-                 m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee, m.extra_measurements
+                 m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee,
+                 m.emb_front_neck, m.emb_back_neck, m.emb_sleeves_length, m.emb_sleeves_round, m.emb_work_length, m.emb_work_width, m.emb_shoulder, m.emb_chest, m.emb_dot, m.emb_armhole,
+                 m.extra_measurements
                  FROM customers c LEFT JOIN measurements m ON m.customer_id = c.id
                  WHERE c.tenant_id = ? AND c.name LIKE ? GROUP BY c.id LIMIT 20`;
             args = [req.tenantId, `%${name}%`];
@@ -62,7 +68,9 @@ router.get('/:id', async (req, res) => {
             sql: `SELECT c.*, m.length as m_length, m.shoulder, m.chest, m.waist, m.dot,
                   m.back_neck, m.front_neck, m.sleeves_length, m.armhole, m.chest_distance, m.sleeves_round,
                   m.t_length, m.t_shoulder, m.t_chest, m.t_waist, m.t_back_neck, m.t_front_neck, m.t_sleeves_length, m.t_sleeves_round, m.t_half_body, m.t_hip,
-                  m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee, m.extra_measurements
+                  m.b_length, m.b_bottom_round, m.b_hip, m.b_fly, m.b_thai, m.b_knee,
+                  m.emb_front_neck, m.emb_back_neck, m.emb_sleeves_length, m.emb_sleeves_round, m.emb_work_length, m.emb_work_width, m.emb_shoulder, m.emb_chest, m.emb_dot, m.emb_armhole,
+                  m.extra_measurements
                   FROM customers c LEFT JOIN measurements m ON m.customer_id = c.id
                   WHERE c.id = ? AND c.tenant_id = ?`,
             args: [id, req.tenantId]
@@ -89,7 +97,9 @@ async function upsertMeasurements(customerId, measurements) {
     const { 
         m_length, length, shoulder, chest, waist, dot, back_neck, front_neck, sleeves_length, armhole, chest_distance, sleeves_round,
         t_length, t_shoulder, t_chest, t_waist, t_back_neck, t_front_neck, t_sleeves_length, t_sleeves_round, t_half_body, t_hip,
-        b_length, b_bottom_round, b_hip, b_fly, b_thai, b_knee, extra_measurements
+        b_length, b_bottom_round, b_hip, b_fly, b_thai, b_knee,
+        emb_front_neck, emb_back_neck, emb_sleeves_length, emb_sleeves_round, emb_work_length, emb_work_width, emb_shoulder, emb_chest, emb_dot, emb_armhole,
+        extra_measurements
     } = measurements;
 
     // Normalize length key (accept both m_length and length)
@@ -107,6 +117,7 @@ async function upsertMeasurements(customerId, measurements) {
                   back_neck=?,front_neck=?,sleeves_length=?,armhole=?,chest_distance=?,sleeves_round=?,
                   t_length=?, t_shoulder=?, t_chest=?, t_waist=?, t_back_neck=?, t_front_neck=?, t_sleeves_length=?, t_sleeves_round=?, t_half_body=?, t_hip=?,
                   b_length=?, b_bottom_round=?, b_hip=?, b_fly=?, b_thai=?, b_knee=?,
+                  emb_front_neck=?, emb_back_neck=?, emb_sleeves_length=?, emb_sleeves_round=?, emb_work_length=?, emb_work_width=?, emb_shoulder=?, emb_chest=?, emb_dot=?, emb_armhole=?,
                   extra_measurements=?,
                   updated_at=datetime('now','localtime') WHERE customer_id=?`,
             args: [
@@ -119,6 +130,9 @@ async function upsertMeasurements(customerId, measurements) {
                 parseFloat(t_sleeves_length) || null, parseFloat(t_sleeves_round) || null, parseFloat(t_half_body) || null, parseFloat(t_hip) || null,
                 parseFloat(b_length) || null, parseFloat(b_bottom_round) || null, parseFloat(b_hip) || null,
                 parseFloat(b_fly) || null, parseFloat(b_thai) || null, parseFloat(b_knee) || null,
+                parseFloat(emb_front_neck) || null, parseFloat(emb_back_neck) || null, parseFloat(emb_sleeves_length) || null, parseFloat(emb_sleeves_round) || null,
+                parseFloat(emb_work_length) || null, parseFloat(emb_work_width) || null, parseFloat(emb_shoulder) || null, parseFloat(emb_chest) || null,
+                parseFloat(emb_dot) || null, parseFloat(emb_armhole) || null,
                 extra,
                 customerId
             ]
@@ -128,9 +142,11 @@ async function upsertMeasurements(customerId, measurements) {
             sql: `INSERT INTO measurements (
                     customer_id,length,shoulder,chest,waist,dot,back_neck,front_neck,sleeves_length,armhole,chest_distance,sleeves_round,
                     t_length, t_shoulder, t_chest, t_waist, t_back_neck, t_front_neck, t_sleeves_length, t_sleeves_round, t_half_body, t_hip,
-                    b_length, b_bottom_round, b_hip, b_fly, b_thai, b_knee, extra_measurements
+                    b_length, b_bottom_round, b_hip, b_fly, b_thai, b_knee,
+                    emb_front_neck, emb_back_neck, emb_sleeves_length, emb_sleeves_round, emb_work_length, emb_work_width, emb_shoulder, emb_chest, emb_dot, emb_armhole,
+                    extra_measurements
                   )
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             args: [
                 customerId,
                 parseFloat(activeLength) || null, parseFloat(shoulder) || null, parseFloat(chest) || null,
@@ -141,6 +157,9 @@ async function upsertMeasurements(customerId, measurements) {
                 parseFloat(t_sleeves_length) || null, parseFloat(t_sleeves_round) || null, parseFloat(t_half_body) || null, parseFloat(t_hip) || null,
                 parseFloat(b_length) || null, parseFloat(b_bottom_round) || null, parseFloat(b_hip) || null,
                 parseFloat(b_fly) || null, parseFloat(b_thai) || null, parseFloat(b_knee) || null,
+                parseFloat(emb_front_neck) || null, parseFloat(emb_back_neck) || null, parseFloat(emb_sleeves_length) || null, parseFloat(emb_sleeves_round) || null,
+                parseFloat(emb_work_length) || null, parseFloat(emb_work_width) || null, parseFloat(emb_shoulder) || null, parseFloat(emb_chest) || null,
+                parseFloat(emb_dot) || null, parseFloat(emb_armhole) || null,
                 extra
             ]
         });

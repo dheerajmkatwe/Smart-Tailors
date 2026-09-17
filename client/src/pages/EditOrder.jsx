@@ -11,7 +11,7 @@ const getAppMode = () => {
     try { return localStorage.getItem('tailor_active_mode') || 'LADIES'; } catch { return 'LADIES'; }
 };
 
-const SERVICE_TYPES_LADIES = ['Blouse', 'Dress', 'Lehenga', 'Chudi', 'Alteration', 'Pico', 'Fall', 'Gonda', 'Krosha Work', 'Other'];
+const SERVICE_TYPES_LADIES = ['Blouse', 'Dress', 'Lehenga', 'Chudi', 'Embroidery', 'Alteration', 'Pico', 'Fall', 'Gonda', 'Krosha Work', 'Other'];
 const SERVICE_TYPES_MENS = ['Shirt', 'Pant', 'Kurta', 'Kurta Pajama', 'Suit', 'Blazer', 'Waistcoat', 'Sherwani', 'Safari Suit', 'Alteration', 'Other'];
 
 const SERVICE_TYPES = getAppMode() === 'MENS' ? SERVICE_TYPES_MENS : SERVICE_TYPES_LADIES;
