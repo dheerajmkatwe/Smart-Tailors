@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-// Ensure the baseUrl always ends with /api to prevent Vercel 404 routing errors
-if (baseUrl && !baseUrl.endsWith('/api')) {
+let baseUrl = import.meta.env.VITE_API_URL;
+if (!baseUrl) {
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    baseUrl = `http://${hostname}:5000/api`;
+} else if (!baseUrl.endsWith('/api')) {
     baseUrl = baseUrl.endsWith('/') ? `${baseUrl}api` : `${baseUrl}/api`;
 }
 
