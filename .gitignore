@@ -28,3 +28,4 @@ about_project.md
 update_new.txt
 *resume*
 server/export-cloud-backup.js
+*.log
