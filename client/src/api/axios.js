@@ -2,8 +2,18 @@ import axios from 'axios';
 
 let baseUrl = import.meta.env.VITE_API_URL;
 if (!baseUrl) {
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    baseUrl = `http://${hostname}:5000/api`;
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+            // Local computer or local Wi-Fi IP testing
+            baseUrl = `http://${hostname}:5000/api`;
+        } else {
+            // Production server / Vercel deployment
+            baseUrl = '/api';
+        }
+    } else {
+        baseUrl = 'http://localhost:5000/api';
+    }
 } else if (!baseUrl.endsWith('/api')) {
     baseUrl = baseUrl.endsWith('/') ? `${baseUrl}api` : `${baseUrl}/api`;
 }
