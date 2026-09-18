@@ -39,37 +39,7 @@ function resolveExpiresAt(auth) {
     return fallback;
 }
 
-function TrialPill({ auth }) {
-    const expiresAt = resolveExpiresAt(auth);
-    const [timeLeft, setTimeLeft] = useState(() => getTimeLeftFromExpiry(expiresAt));
 
-    useEffect(() => {
-        if (!expiresAt) return;
-        setTimeLeft(getTimeLeftFromExpiry(expiresAt));
-        const id = setInterval(() => setTimeLeft(getTimeLeftFromExpiry(expiresAt)), 1000);
-        return () => clearInterval(id);
-    }, [expiresAt]);
-
-    const isFree = !auth?.subscription_type || auth.subscription_type === 'Free';
-    if (!isFree || !timeLeft) return null;
-
-    const urgency = timeLeft.days < 3;
-
-    const parts = [];
-    if (timeLeft.days > 0)  parts.push(`${timeLeft.days}d`);
-    parts.push(`${String(timeLeft.hours).padStart(2,'0')}h`);
-    parts.push(`${String(timeLeft.minutes).padStart(2,'0')}m`);
-    parts.push(`${String(timeLeft.seconds).padStart(2,'0')}s`);
-    const countdownStr = parts.join(' · ');
-
-    return (
-        <div className={`trial-pill${urgency ? ' trial-pill--urgent' : ''}`}>
-            <span className="trial-pill__dot" />
-            <span className="trial-pill__label">Trial:</span>
-            <span className="trial-pill__time">{countdownStr}</span>
-        </div>
-    );
-}
 
 /* ─── Free Trial Dashboard Popup Banner ────────────────────────────────── */
 function FreeTrialPopup({ auth }) {
@@ -344,8 +314,7 @@ export default function Dashboard({ onMenuClick, auth }) {
                     </div>
                 </div>
 
-                {/* Centre: Trial Pill — fed by fresh server data */}
-                <TrialPill auth={trialInfo} />
+
 
                 {/* Create New Order Button */}
                 <Link to="/new-order" className="btn btn-primary topbar-create-order-btn" style={{
