@@ -35,14 +35,8 @@ const measurementLabelsLadies = {
         { key: 'b_hip', label: 'B-Hip (HP)' }, { key: 'b_fly', label: 'B-Fly (FLY)' },
         { key: 'b_thai', label: 'B-Thai' }, { key: 'b_knee', label: 'B-Knee' },
     ],
-    EMBROIDERY: [
-        { key: 'emb_front_neck', label: 'Front Neck' }, { key: 'emb_back_neck', label: 'Back Neck' },
-        { key: 'emb_sleeves_length', label: 'Sleeves Length' }, { key: 'emb_sleeves_round', label: 'Sleeves Round' },
-        { key: 'emb_work_length', label: 'Work Length' }, { key: 'emb_work_width', label: 'Work Width' },
-        { key: 'emb_shoulder', label: 'Shoulder' }, { key: 'emb_chest', label: 'Chest' },
-        { key: 'emb_dot', label: 'Dot (Apex)' }, { key: 'emb_armhole', label: 'Armhole' },
-    ]
 };
+
 
 const measurementLabelsMens = {
     SHIRT: [
@@ -337,14 +331,6 @@ export default function NewOrder({ onMenuClick, auth }) {
     // Services
     const [services, setServices] = useState(initialDraft?.services || [initialService()]);
 
-    // Embroidery
-    const [hasEmbroidery, setHasEmbroidery] = useState(initialDraft?.hasEmbroidery || false);
-    const [embroideryWorker, setEmbroideryWorker] = useState(initialDraft?.embroideryWorker || '');
-    const [embroideryCost, setEmbroideryCost] = useState(initialDraft?.embroideryCost || '');
-    const [embroidery, setEmbroidery] = useState(initialDraft?.embroidery || {
-        work_type: 'Hand Work', embellishments: '', matching_colors: '', placement_area: '', neck_depth: '', work_area_size: '', reference_image: ''
-    });
-
     // Images
     const [images, setImages] = useState(initialDraft?.images || []);
 
@@ -420,10 +406,6 @@ export default function NewOrder({ onMenuClick, auth }) {
                 measurements,
                 extraMeasurements,
                 services,
-                hasEmbroidery,
-                embroideryWorker,
-                embroideryCost,
-                embroidery,
                 images,
                 advancePaid,
                 paymentMethod
@@ -456,10 +438,6 @@ export default function NewOrder({ onMenuClick, auth }) {
         if (p.measurements) setMeasurements(p.measurements);
         if (p.extraMeasurements) setExtraMeasurements(p.extraMeasurements);
         if (p.services) setServices(p.services);
-        if (p.hasEmbroidery !== undefined) setHasEmbroidery(p.hasEmbroidery);
-        if (p.embroideryWorker !== undefined) setEmbroideryWorker(p.embroideryWorker);
-        if (p.embroideryCost !== undefined) setEmbroideryCost(p.embroideryCost);
-        if (p.embroidery) setEmbroidery(p.embroidery);
         if (p.images) setImages(p.images);
         if (p.advancePaid) setAdvancePaid(p.advancePaid);
         if (p.paymentMethod) setPaymentMethod(p.paymentMethod);
@@ -506,10 +484,6 @@ export default function NewOrder({ onMenuClick, auth }) {
         });
         setExtraMeasurements([]);
         setServices([initialService()]);
-        setHasEmbroidery(false);
-        setEmbroideryWorker('');
-        setEmbroideryCost('');
-        setEmbroidery({ work_type: 'Hand Work', embellishments: '', matching_colors: '', placement_area: '', neck_depth: '', work_area_size: '', reference_image: '' });
         setImages([]);
         setAdvancePaid('');
         setPaymentMethod('Cash');
@@ -523,17 +497,17 @@ export default function NewOrder({ onMenuClick, auth }) {
     // ── Draft Persistence ─────────────────────────────
     useEffect(() => {
         const draft = {
-            customer, customerId, customerFound, bookingDate, deliveryDate, assignedWorker, measurementType, activeTab, measurements, extraMeasurements, services, hasEmbroidery, embroideryWorker, embroideryCost, embroidery, images, advancePaid, paymentMethod
+            customer, customerId, customerFound, bookingDate, deliveryDate, assignedWorker, measurementType, activeTab, measurements, extraMeasurements, services, images, advancePaid, paymentMethod
         };
         localStorage.setItem('newOrderDraft', JSON.stringify(draft));
-    }, [customer, customerId, customerFound, bookingDate, deliveryDate, assignedWorker, measurementType, activeTab, measurements, extraMeasurements, services, hasEmbroidery, embroideryWorker, embroideryCost, embroidery, images, advancePaid, paymentMethod]);
+    }, [customer, customerId, customerFound, bookingDate, deliveryDate, assignedWorker, measurementType, activeTab, measurements, extraMeasurements, services, images, advancePaid, paymentMethod]);
 
     // ── Computed totals ───────────────────────────────
     const totalAmount = services.reduce((s, svc) => {
         const qty = parseFloat(svc.quantity) || 0;
         const price = parseFloat(svc.price) || 0;
         return s + qty * price;
-    }, 0) + (hasEmbroidery ? (parseFloat(embroideryCost) || 0) : 0);
+    }, 0);
 
     const advance = parseFloat(advancePaid) || 0;
     const balance = totalAmount - advance;
@@ -1269,126 +1243,6 @@ export default function NewOrder({ onMenuClick, auth }) {
                         </div>
                     </div>
 
-                    {/* ─── EMBROIDERY ───────────────────────── */}
-                    <div className="card mb-16">
-                        <div className="card-header flex-between" style={{cursor: 'pointer'}} onClick={() => setHasEmbroidery(!hasEmbroidery)}>
-                            <h3 className="card-title flex gap-8">
-                                <span style={{fontSize: '18px'}}>✨</span> Embroidery / Hand Work
-                            </h3>
-                            <input 
-                                type="checkbox" 
-                                checked={hasEmbroidery}
-                                onChange={(e) => { e.stopPropagation(); setHasEmbroidery(e.target.checked); }}
-                                style={{ width: 18, height: 18, accentColor: 'var(--maroon)' }}
-                            />
-                        </div>
-                        {hasEmbroidery && (
-                            <div className="card-body">
-                                <div className="grid-2 gap-16">
-                                    <div className="form-group">
-                                        <label className="form-label">Type of Work</label>
-                                        <select 
-                                            className="form-select" 
-                                            value={embroidery.work_type}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, work_type: e.target.value}))}
-                                        >
-                                            <option>Hand Work (Maggam)</option>
-                                            <option>Machine Embroidery</option>
-                                            <option>Computer Work</option>
-                                            <option>Aari Work</option>
-                                            <option>Zardosi</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Embellishments</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-input" 
-                                            placeholder="e.g. Stonework, Pearls, Cutdana, Zari"
-                                            value={embroidery.embellishments}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, embellishments: e.target.value}))}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Matching Colors / Thread</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-input" 
-                                            placeholder="e.g. Gold Zari, Pink Thread"
-                                            value={embroidery.matching_colors}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, matching_colors: e.target.value}))}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Placement Area</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-input" 
-                                            placeholder="e.g. Back Neck + Sleeves"
-                                            value={embroidery.placement_area}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, placement_area: e.target.value}))}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Neck Depth (inches)</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.5"
-                                            className="form-input" 
-                                            placeholder="e.g. 10.5"
-                                            value={embroidery.neck_depth}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, neck_depth: e.target.value}))}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Work Area Size (Sleeves)</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-input" 
-                                            placeholder="e.g. 5 inch margin"
-                                            value={embroidery.work_area_size}
-                                            onChange={(e) => setEmbroidery(prev => ({...prev, work_area_size: e.target.value}))}
-                                        />
-                                    </div>
-                                    
-                                    {/* Cost & Worker Assignment for Embroidery */}
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '16px 0' }} />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                        <label className="form-label">Embroidery Worker Appointed</label>
-                                        <select 
-                                            className="form-select"
-                                            value={embroideryWorker}
-                                            onChange={(e) => setEmbroideryWorker(e.target.value)}
-                                        >
-                                            <option value="">-- Assign Later --</option>
-                                            {workers.map(w => (
-                                                <option key={w.id} value={w.name}>{w.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                        <label className="form-label">Embroidery Cost Quoted (₹)</label>
-                                        <div className="input-prefix">
-                                            <span className="prefix-symbol">₹</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.5"
-                                                value={embroideryCost}
-                                                onChange={e => setEmbroideryCost(e.target.value)}
-                                                placeholder="0.00"
-                                                className="form-input"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
 
                     {/* ─── DESIGN IMAGES ──────────────────── */}
                     <div className="card mb-16">
