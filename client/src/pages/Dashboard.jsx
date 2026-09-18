@@ -1,21 +1,100 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Package, Clock, CheckCircle, DollarSign,
     Users, ShoppingBag, AlertTriangle, TrendingUp,
-    Eye, Plus, ClipboardList, Menu
+    Eye, Plus, PlusCircle, ClipboardList, Menu, ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
+import CalendarView from '../components/CalendarView';
+import KpiOverviewModal from '../components/KpiOverviewModal';
 
-function StatCard({ value, label, icon: Icon, colorClass, iconBg, iconColor }) {
+function EnhancedStatCard({ value, label, icon: Icon, colorTheme, active, onClick }) {
+    const themes = {
+        gold: {
+            borderTop: '4px solid #C6A75E',
+            iconBg: '#FFF6DF',
+            iconColor: '#A8893C',
+            accentColor: '#A8893C',
+            bgGradient: 'linear-gradient(135deg, rgba(255, 248, 230, 0.6) 0%, #FFFFFF 100%)',
+        },
+        maroon: {
+            borderTop: '4px solid #6A1E2E',
+            iconBg: '#FDF0F2',
+            iconColor: '#6A1E2E',
+            accentColor: '#6A1E2E',
+            bgGradient: 'linear-gradient(135deg, rgba(253, 240, 242, 0.6) 0%, #FFFFFF 100%)',
+        },
+        green: {
+            borderTop: '4px solid #2E7D32',
+            iconBg: '#EAF5EA',
+            iconColor: '#2E7D32',
+            accentColor: '#2E7D32',
+            bgGradient: 'linear-gradient(135deg, rgba(234, 245, 234, 0.6) 0%, #FFFFFF 100%)',
+        },
+        blue: {
+            borderTop: '4px solid #1565C0',
+            iconBg: '#EDF4FC',
+            iconColor: '#1565C0',
+            accentColor: '#1565C0',
+            bgGradient: 'linear-gradient(135deg, rgba(237, 244, 252, 0.6) 0%, #FFFFFF 100%)',
+        },
+    };
+
+    const style = themes[colorTheme] || themes.gold;
+
     return (
-        <div className={`stat-card ${colorClass}`} style={{ height: '100%', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
-            <div className="stat-icon" style={{ background: iconBg }}>
-                <Icon size={20} color={iconColor} />
+        <div
+            onClick={onClick}
+            className={`stat-card enhanced-kpi-card ${active ? 'active-stat' : ''}`}
+            style={{
+                background: style.bgGradient,
+                borderTop: style.borderTop,
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px 18px',
+                cursor: 'pointer',
+                transition: 'all 0.22s ease-in-out',
+                boxShadow: active ? '0 8px 24px rgba(0,0,0,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                borderLeft: '1px solid rgba(0,0,0,0.06)',
+                borderRight: '1px solid rgba(0,0,0,0.06)',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '125px',
+                position: 'relative',
+                overflow: 'hidden'
+            }}
+        >
+            <div className="flex-between" style={{ alignItems: 'flex-start' }}>
+                <div className="stat-icon-wrap" style={{
+                    width: 40, height: 40, borderRadius: '12px',
+                    background: style.iconBg, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+                }}>
+                    <Icon size={22} color={style.iconColor} />
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                        fontSize: 30, fontWeight: 700, fontFamily: 'var(--font-serif)',
+                        color: 'var(--charcoal)', lineHeight: 1
+                    }}>
+                        {value ?? 0}
+                    </div>
+                </div>
             </div>
-            <div className="stat-value" style={{ flexGrow: 1 }}>{value ?? 0}</div>
-            <div className="stat-label">{label}</div>
+
+            <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--maroon-dark)', letterSpacing: '0.01em' }}>
+                    {label}
+                </div>
+                <div className="flex items-center gap-4" style={{ fontSize: 11, color: style.accentColor, fontWeight: 600, marginTop: 4 }}>
+                    <span>View Details Overview</span>
+                    <ArrowRight size={12} />
+                </div>
+            </div>
         </div>
     );
 }
@@ -36,41 +115,49 @@ function formatDate(d) {
 
 export default function Dashboard({ onMenuClick }) {
     const [data, setData] = useState(null);
+    const [allOrders, setAllOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('dueToday'); // 'dueToday', 'pending', 'ready', 'dueTomorrow', 'overdue'
-    const notifiedRef = React.useRef(false);
+    const [activeKpiCategory, setActiveKpiCategory] = useState(null);
+    const [isOverviewModalOpen, setIsOverviewModalOpen] = useState(false);
 
-    useEffect(() => {
-        api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
-                
-                // Show notifications for due today and tomorrow (Throttled to once every 3 hours)
-                const lastNotified = localStorage.getItem('dashboard_toast_time');
-                const now = new Date().getTime();
-                const threeHours = 3 * 60 * 60 * 1000;
-                
-                if (!lastNotified || now - parseInt(lastNotified) > threeHours) {
-                    if (r.data.dueTodayOrders?.length > 0) {
-                        r.data.dueTodayOrders.forEach(order => {
-                            toast(`🚚 ${order.customer_name}'s delivery is due today!`, {
-                                icon: '🗓️',
-                                style: { borderRadius: '10px', background: '#6A1E2E', color: '#fff', fontSize: '14px', fontWeight: '600' },
-                            });
-                        });
-                    }
-                    if (r.data.dueTomorrowOrders?.length > 0) {
-                        toast(`🔔 ${r.data.dueTomorrowOrders.length} order(s) due tomorrow!`, {
-                            icon: '⏰',
-                            style: { borderRadius: '10px', background: '#C6A75E', color: '#fff', fontSize: '14px', fontWeight: '600' },
-                        });
-                    }
-                    localStorage.setItem('dashboard_toast_time', now.toString());
-                }
+    const loadDashboardData = useCallback(() => {
+        return Promise.all([
+            api.get('/dashboard'),
+            api.get('/orders')
+        ])
+            .then(([dashRes, ordersRes]) => {
+                setData(dashRes.data);
+                setAllOrders(ordersRes.data || []);
             })
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        loadDashboardData().then(() => {
+            // Notifications throttled
+            const lastNotified = localStorage.getItem('dashboard_toast_time');
+            const now = new Date().getTime();
+            const threeHours = 3 * 60 * 60 * 1000;
+
+            if (!lastNotified || now - parseInt(lastNotified) > threeHours) {
+                if (data?.dueTodayOrders?.length > 0) {
+                    data.dueTodayOrders.forEach(order => {
+                        toast(`🚚 ${order.customer_name}'s delivery is due today!`, {
+                            icon: '🗓️',
+                            style: { borderRadius: '10px', background: '#6A1E2E', color: '#fff', fontSize: '14px', fontWeight: '600' },
+                        });
+                    });
+                }
+                localStorage.setItem('dashboard_toast_time', now.toString());
+            }
+        });
+    }, []);
+
+    const handleKpiCardClick = (categoryKey) => {
+        setActiveKpiCategory(categoryKey);
+        setIsOverviewModalOpen(true);
+    };
 
     if (loading) return (
         <div>
@@ -95,8 +182,9 @@ export default function Dashboard({ onMenuClick }) {
 
     return (
         <div>
+            {/* Topbar */}
             <div className="topbar flex-between">
-                <div className="flex">
+                <div className="flex items-center gap-10">
                     <button className="mobile-menu-btn" onClick={onMenuClick}>
                         <Menu size={22} />
                     </button>
@@ -105,251 +193,134 @@ export default function Dashboard({ onMenuClick }) {
                         <div className="topbar-subtitle">{todayStr}</div>
                     </div>
                 </div>
-                <Link to="/new-order" className="btn btn-primary">
-                    <Plus size={16} /> <span className="hide-mobile">New Order</span>
+
+                {/* Create New Order Button - Always text & icon visible */}
+                <Link to="/new-order" className="btn btn-primary topbar-create-order-btn" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '9px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 600,
+                    fontSize: 13.5,
+                    boxShadow: '0 4px 12px rgba(106,30,46,0.25)',
+                    whiteSpace: 'nowrap'
+                }}>
+                    <PlusCircle size={18} />
+                    <span>Create New Order</span>
                 </Link>
             </div>
 
             <div className="page-container">
+                {/* Overdue alert banner */}
                 {data?.overdueCount > 0 && (
-                    <div className="alert alert-warning flex gap-8 mb-16" onClick={() => setActiveTab('overdue')} style={{ cursor: 'pointer' }}>
+                    <div className="alert alert-warning flex gap-8 mb-16" onClick={() => handleKpiCardClick('overdue')} style={{ cursor: 'pointer' }}>
                         <AlertTriangle size={16} />
-                        <strong>{data.overdueCount} order(s)</strong>&nbsp;are overdue and not yet delivered!
+                        <strong>{data.overdueCount} order(s)</strong>&nbsp;are overdue and not yet delivered! Click to view details.
                     </div>
                 )}
 
-                <div className="grid-4 mb-24">
-                    <div onClick={() => setActiveTab('dueToday')} style={{ cursor: 'pointer' }}>
-                        <StatCard value={data?.dueToday} label="Due Today" icon={Clock}
-                            colorClass={`gold ${activeTab === 'dueToday' ? 'active-stat' : ''}`}
-                            iconBg="rgba(198,167,94,0.12)" iconColor="#C6A75E" />
-                    </div>
-                    <div onClick={() => setActiveTab('pending')} style={{ cursor: 'pointer' }}>
-                        <StatCard value={data?.pendingCount} label="Pending Orders" icon={Package}
-                            colorClass={`maroon ${activeTab === 'pending' ? 'active-stat' : ''}`}
-                            iconBg="rgba(106,30,46,0.1)" iconColor="#6A1E2E" />
-                    </div>
-                    <div onClick={() => setActiveTab('ready')} style={{ cursor: 'pointer' }}>
-                        <StatCard value={data?.readyCount} label="Ready for Pickup" icon={CheckCircle}
-                            colorClass={`green ${activeTab === 'ready' ? 'active-stat' : ''}`}
-                            iconBg="rgba(46,125,50,0.1)" iconColor="#2E7D32" />
-                    </div>
-                    <div onClick={() => setActiveTab('dueTomorrow')} style={{ cursor: 'pointer' }}>
-                        <StatCard value={data?.dueTomorrow} label="Due Tomorrow" icon={AlertTriangle}
-                            colorClass={`blue ${activeTab === 'dueTomorrow' ? 'active-stat' : ''}`}
-                            iconBg="rgba(21,101,192,0.1)" iconColor="#1565C0" />
-                    </div>
+                {/* 1. TOP SECTION: ENHANCED KPI CARDS (2 per row on mobile & desktop in 2-col grid) */}
+                <div className="kpi-grid mb-24">
+                    <EnhancedStatCard
+                        value={data?.dueToday}
+                        label="Due Today"
+                        icon={Clock}
+                        colorTheme="gold"
+                        active={activeKpiCategory === 'dueToday'}
+                        onClick={() => handleKpiCardClick('dueToday')}
+                    />
+                    <EnhancedStatCard
+                        value={data?.pendingCount}
+                        label="Pending Orders"
+                        icon={Package}
+                        colorTheme="maroon"
+                        active={activeKpiCategory === 'pending'}
+                        onClick={() => handleKpiCardClick('pending')}
+                    />
+                    <EnhancedStatCard
+                        value={data?.readyCount}
+                        label="Ready for Pickup"
+                        icon={CheckCircle}
+                        colorTheme="green"
+                        active={activeKpiCategory === 'ready'}
+                        onClick={() => handleKpiCardClick('ready')}
+                    />
+                    <EnhancedStatCard
+                        value={data?.dueTomorrow}
+                        label="Due Tomorrow"
+                        icon={AlertTriangle}
+                        colorTheme="blue"
+                        active={activeKpiCategory === 'dueTomorrow'}
+                        onClick={() => handleKpiCardClick('dueTomorrow')}
+                    />
                 </div>
 
-                <div className="grid-2 gap-16">
+                {/* KPI Overview Modal / Details Box */}
+                <KpiOverviewModal
+                    isOpen={isOverviewModalOpen}
+                    onClose={() => setIsOverviewModalOpen(false)}
+                    categoryKey={activeKpiCategory}
+                    allOrders={allOrders}
+                    onStatusUpdate={loadDashboardData}
+                />
+
+                {/* 2. CENTER SECTION: CALENDAR VIEW */}
+                <CalendarView
+                    orders={allOrders}
+                    onStatusUpdate={loadDashboardData}
+                />
+
+                {/* 3. QUICK STATS & QUICK ACTIONS */}
+                <div className="grid-2 gap-16 mb-24">
                     <div className="card">
                         <div className="card-header">
-                            <h3 className="card-title">
-                                {activeTab === 'dueToday' ? 'Due Today' :
-                                    activeTab === 'dueTomorrow' ? 'Due Tomorrow' :
-                                        activeTab === 'pending' ? 'Pending Orders' : 
-                                            activeTab === 'overdue' ? 'Overdue Orders' : 'Ready for Pickup'}
-                            </h3>
-                            <span className={`badge ${activeTab === 'dueToday' ? 'badge-pending' :
-                                activeTab === 'dueTomorrow' ? 'badge-pending' :
-                                    activeTab === 'pending' ? 'badge-pending' : 
-                                        activeTab === 'overdue' ? 'badge-pending' : 'badge-ready'
-                                }`}>
-                                {activeTab === 'dueToday' ? data?.dueToday :
-                                    activeTab === 'dueTomorrow' ? data?.dueTomorrow :
-                                        activeTab === 'pending' ? data?.pendingCount : 
-                                            activeTab === 'overdue' ? data?.overdueCount : data?.readyCount} orders
-                            </span>
+                            <h3 className="card-title">Quick Stats</h3>
                         </div>
-                        <div className="card-body" style={{ padding: 0 }}>
-                             {((activeTab === 'dueToday' && !data?.dueTodayOrders?.length) ||
-                                (activeTab === 'dueTomorrow' && !data?.dueTomorrowOrders?.length) ||
-                                (activeTab === 'pending' && !data?.pendingOrders?.length) ||
-                                (activeTab === 'overdue' && !data?.overdueOrders?.length) ||
-                                (activeTab === 'ready' && !data?.readyOrders?.length)) ? (
-                                <div className="empty-state" style={{ padding: '32px 24px' }}>
-                                    <CheckCircle size={32} style={{ opacity: 0.3, display: 'block', margin: '0 auto 8px' }} />
-                                    No {activeTab === 'dueToday' ? 'deliveries due today' :
-                                        activeTab === 'dueTomorrow' ? 'deliveries due tomorrow' :
-                                            activeTab === 'pending' ? 'pending orders' : 
-                                                activeTab === 'overdue' ? 'overdue orders' : 'orders ready for pickup'}
+                        <div className="card-body">
+                            {[
+                                { icon: Users, color: 'var(--gold)', label: 'Total Customers', val: data?.totalCustomers },
+                                { icon: ShoppingBag, color: 'var(--maroon)', label: 'Total Orders', val: data?.totalOrders },
+                                { icon: DollarSign, color: '#2E7D32', label: 'Advance Collected', val: `\u20b9${(data?.totalAdvance || 0).toLocaleString('en-IN')}` },
+                                { icon: AlertTriangle, color: '#E65100', label: 'Overdue Orders', val: data?.overdueCount, clickable: true, key: 'overdue' },
+                            ].map(({ icon: Ic, color, label, val, clickable, key }, i) => (
+                                <div
+                                    key={i}
+                                    className="flex-between"
+                                    style={{
+                                        padding: '10px 0', borderBottom: i < 3 ? '1px solid var(--gray-light)' : 'none',
+                                        cursor: clickable ? 'pointer' : 'default'
+                                    }}
+                                    onClick={() => clickable ? handleKpiCardClick(key) : null}
+                                >
+                                    <span className="flex gap-8"><Ic size={16} color={color} />{label}</span>
+                                    <strong>{val}</strong>
                                 </div>
-                            ) : (
-                                <>
-                                    <div
-                                        className="table-container hide-on-mobile"
-                                        style={{
-                                            borderRadius: 0,
-                                            border: 'none',
-                                            maxHeight: 360,
-                                            overflowY: 'auto',
-                                        }}
-                                    >
-                                        <table>
-                                            <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-                                                <tr>
-                                                    <th>Customer</th><th>Phone</th><th>Delivery</th><th>Status</th><th>Bill</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(() => {
-                                                    const list = activeTab === 'dueToday' ? data.dueTodayOrders :
-                                                            activeTab === 'dueTomorrow' ? data.dueTomorrowOrders :
-                                                            activeTab === 'pending' ? data.pendingOrders : 
-                                                            activeTab === 'overdue' ? data.overdueOrders : data.readyOrders;
-                                                    const limitedList = (list || []).slice(0, 5);
-                                                    const hasMore = (list || []).length > 5;
-                                                    const tabMap = { dueToday: 'Pending', dueTomorrow: 'Pending', pending: 'Pending', overdue: 'Overdue', ready: 'Ready' };
-                                                    const targetStatus = tabMap[activeTab];
-
-                                                    return (
-                                                        <>
-                                                            {limitedList.map(o => (
-                                                                <tr key={o.order_id}>
-                                                                    <td>
-                                                                        <Link to={`/customer/${o.customer_id}`} state={{ from: '/' }} style={{ color: 'inherit', textDecoration: 'none' }}>
-                                                                            <strong>{o.customer_name}</strong>
-                                                                        </Link>
-                                                                    </td>
-                                                                    <td style={{ fontSize: 13 }}>{o.phone_number}</td>
-                                                                    <td style={{ fontSize: 13, color: activeTab === 'overdue' ? '#B71C1C' : 'inherit', fontWeight: activeTab === 'overdue' ? 700 : 500 }}>
-                                                                        {o.delivery_date
-                                                                            ? new Date(o.delivery_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                                                                            : '—'}
-                                                                    </td>
-                                                                    <td><StatusBadge status={o.status} /></td>
-                                                                    <td>
-                                                                        <div className="flex gap-8">
-                                                                            <Link to={`/customer/${o.customer_id}`} state={{ from: '/' }} className="btn btn-sm btn-ghost p-4" title="View Measurements">
-                                                                                <Users size={14} />
-                                                                            </Link>
-                                                                            <Link to={`/bill/${o.order_id}`} className="btn btn-sm btn-outline">
-                                                                                <Eye size={12} /> View
-                                                                            </Link>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                            {hasMore && (
-                                                                <tr>
-                                                                    <td colSpan="5" style={{ textAlign: 'center', padding: '16px' }}>
-                                                                        <Link to={`/orders?status=${targetStatus}`} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', background: 'var(--blush)' }}>
-                                                                            View More ({(list.length - 5)} more)
-                                                                        </Link>
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </>
-                                                    );
-                                                })()}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="mobile-cards show-on-mobile" style={{ padding: '16px' }}>
-                                        {(() => {
-                                            const list = activeTab === 'dueToday' ? data.dueTodayOrders :
-                                                    activeTab === 'dueTomorrow' ? data.dueTomorrowOrders :
-                                                    activeTab === 'pending' ? data.pendingOrders : 
-                                                    activeTab === 'overdue' ? data.overdueOrders : data.readyOrders;
-                                            const limitedList = (list || []).slice(0, 5);
-                                            const hasMore = (list || []).length > 5;
-                                            const tabMap = { dueToday: 'Pending', dueTomorrow: 'Pending', pending: 'Pending', overdue: 'Overdue', ready: 'Ready' };
-                                            const targetStatus = tabMap[activeTab];
-
-                                            return (
-                                                <>
-                                                    {limitedList.map(o => (
-                                                        <div className="order-card" key={o.order_id}>
-                                                            <div className="order-card-header">
-                                                                <div className="order-card-id">
-                                                                    <Link to={`/customer/${o.customer_id}`} state={{ from: '/' }}>
-                                                                        <strong>{o.customer_name}</strong>
-                                                                    </Link>
-                                                                </div>
-                                                                <StatusBadge status={o.status} />
-                                                            </div>
-                                                            <div className="order-card-body">
-                                                                <div className="order-card-item">
-                                                                    <span className="order-card-label">Phone</span>
-                                                                    <span className="order-card-value">{o.phone_number}</span>
-                                                                </div>
-                                                                <div className="order-card-item">
-                                                                    <span className="order-card-label">Delivery Date</span>
-                                                                    <span className="order-card-value" style={{ color: activeTab === 'overdue' ? '#B71C1C' : 'inherit', fontWeight: activeTab === 'overdue' ? 700 : 500 }}>
-                                                                        {o.delivery_date
-                                                                            ? new Date(o.delivery_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                                                                            : '—'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="order-card-actions">
-                                                                <Link to={`/customer/${o.customer_id}`} state={{ from: '/' }} className="btn btn-sm btn-ghost">
-                                                                    <Users size={14} /> Measurements
-                                                                </Link>
-                                                                <Link to={`/bill/${o.order_id}`} className="btn btn-sm btn-outline">
-                                                                    <Eye size={12} /> View Bill
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {hasMore && (
-                                                        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-                                                            <Link to={`/orders?status=${targetStatus}`} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', background: 'var(--blush)' }}>
-                                                                View More ({(list.length - 5)} more)
-                                                            </Link>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                </>
-                            )}
+                            ))}
                         </div>
                     </div>
 
-                    <div>
-                        <div className="card mb-16">
-                            <div className="card-header">
-                                <h3 className="card-title">Quick Stats</h3>
-                            </div>
-                            <div className="card-body">
-                                {[
-                                    { icon: Users, color: 'var(--gold)', label: 'Total Customers', val: data?.totalCustomers },
-                                    { icon: ShoppingBag, color: 'var(--maroon)', label: 'Total Orders', val: data?.totalOrders },
-                                    { icon: DollarSign, color: '#2E7D32', label: 'Advance Collected', val: `\u20b9${(data?.totalAdvance || 0).toLocaleString('en-IN')}` },
-                                    { icon: AlertTriangle, color: '#E65100', label: 'Overdue', val: data?.overdueCount },
-                                ].map(({ icon: Ic, color, label, val }, i) => (
-                                    <div key={i} className="flex-between" style={{ padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--gray-light)' : 'none', cursor: label === 'Overdue' ? 'pointer' : 'default' }}
-                                        onClick={() => label === 'Overdue' ? setActiveTab('overdue') : null}>
-                                        <span className="flex gap-8"><Ic size={15} color={color} />{label}</span>
-                                        <strong>{val}</strong>
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="card">
+                        <div className="card-header">
+                            <h3 className="card-title">Quick Actions</h3>
                         </div>
-
-                        <div className="card">
-                            <div className="card-header">
-                                <h3 className="card-title">Quick Actions</h3>
-                            </div>
-                            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <Link to="/new-order" className="btn btn-primary" style={{ justifyContent: 'center' }}>
-                                    <Plus size={16} /> Create New Order
-                                </Link>
-                                <Link to="/search" className="btn btn-outline" style={{ justifyContent: 'center' }}>
-                                    <Users size={16} /> Search Customer
-                                </Link>
-                                <Link to="/orders" className="btn btn-ghost" style={{ justifyContent: 'center' }}>
-                                    <ClipboardList size={16} /> View All Orders
-                                </Link>
-                            </div>
+                        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <Link to="/new-order" className="btn btn-primary" style={{ justifyContent: 'center', padding: '11px 16px' }}>
+                                <PlusCircle size={16} /> Create New Order
+                            </Link>
+                            <Link to="/search" className="btn btn-outline" style={{ justifyContent: 'center', padding: '11px 16px' }}>
+                                <Users size={16} /> Search Customer
+                            </Link>
+                            <Link to="/orders" className="btn btn-ghost" style={{ justifyContent: 'center', padding: '11px 16px' }}>
+                                <ClipboardList size={16} /> View All Orders
+                            </Link>
                         </div>
                     </div>
                 </div>
 
-                <div className="card mt-24">
-                    <div className="card-header">
+                {/* 4. BOTTOM SECTION: RECENT ORDERS */}
+                <div className="card">
+                    <div className="card-header flex-between">
                         <h3 className="card-title">Recent Orders</h3>
                         <Link to="/orders" className="btn btn-sm btn-ghost">View All</Link>
                     </div>
@@ -377,9 +348,9 @@ export default function Dashboard({ onMenuClick }) {
                                                 <strong>{o.customer_name}</strong>
                                             </Link>
                                         </td>
-                                        <td style={{ fontSize: 12 }}>{o.phone_number}</td>
-                                        <td style={{ fontSize: 12 }}>{formatDate(o.booking_date)}</td>
-                                        <td style={{ fontSize: 12 }}>{formatDate(o.delivery_date)}</td>
+                                        <td style={{ fontSize: 13 }}>{o.phone_number}</td>
+                                        <td style={{ fontSize: 13 }}>{formatDate(o.booking_date)}</td>
+                                        <td style={{ fontSize: 13 }}>{formatDate(o.delivery_date)}</td>
                                         <td><strong>{`\u20b9${parseFloat(o.total_amount).toLocaleString('en-IN')}`}</strong></td>
                                         <td><StatusBadge status={o.status} /></td>
                                         <td>
@@ -449,8 +420,12 @@ export default function Dashboard({ onMenuClick }) {
                 </div>
             </div>
             <style>{`
+                .enhanced-kpi-card:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 10px 24px rgba(0,0,0,0.1) !important;
+                }
                 .active-stat {
-                    box-shadow: 0 0 0 3px var(--gold-light), var(--shadow-lg) !important;
+                    box-shadow: 0 0 0 3px var(--gold-light), 0 8px 24px rgba(0,0,0,0.12) !important;
                     transform: translateY(-2px);
                 }
             `}</style>

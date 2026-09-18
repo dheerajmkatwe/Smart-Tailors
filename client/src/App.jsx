@@ -17,7 +17,6 @@ import Alterations from './pages/Alterations';
 import EditOrder from './pages/EditOrder';
 import BoutiqueSettings from './pages/BoutiqueSettings';
 import SuperAdmin from './pages/SuperAdmin';
-import Subscribe from './pages/Subscribe';
 import TrackOrder from './pages/TrackOrder';
 import './index.css';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -177,7 +176,6 @@ export default function App() {
                       <Route path="/profits" element={<Profits onMenuClick={toggleSidebar} />} />
                       <Route path="/alterations" element={<Alterations onMenuClick={toggleSidebar} />} />
                       <Route path="/settings" element={<BoutiqueSettings onMenuClick={toggleSidebar} />} />
-                      <Route path="/subscribe" element={<Subscribe onMenuClick={toggleSidebar} />} />
                     </>
                   )}
 

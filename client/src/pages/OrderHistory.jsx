@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Eye, Filter, RefreshCw, Menu, LayoutGrid, List, Edit2, Check, X, User, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Filter, RefreshCw, Menu, LayoutGrid, List, Edit2, Check, X, User, Trash2, AlertTriangle, Grid, LayoutList } from 'lucide-react';
 import api from '../api/axios';
 import { getOfflineOrders } from '../utils/offlineStore';
 
@@ -25,7 +25,6 @@ export default function OrderHistory({ onMenuClick }) {
     const [statusFilter, setStatusFilter] = useState(STATUS_OPTIONS.includes(initStatus) ? initStatus : 'All');
     const [dateFilter, setDateFilter] = useState('');
     const [updatingId, setUpdatingId] = useState(null);
-    const [viewMode, setViewMode] = useState(window.innerWidth <= 768 ? 'cards' : 'table');
     const [editingAdvanceId, setEditingAdvanceId] = useState(null);
     const [tempAdvanceValue, setTempAdvanceValue] = useState('');
 
@@ -261,24 +260,6 @@ export default function OrderHistory({ onMenuClick }) {
                     </div>
                 </div>
                 <div className="flex gap-8" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <div className="flex gap-2 p-2" style={{ background: 'var(--gray-light)', borderRadius: 6, flexShrink: 0 }}>
-                        <button
-                            className={`btn btn-sm ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setViewMode('table')}
-                            style={{ padding: '4px 8px', minHeight: 'auto', border: 'none' }}
-                            title="Table View"
-                        >
-                            <List size={14} />
-                        </button>
-                        <button
-                            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setViewMode('cards')}
-                            style={{ padding: '4px 8px', minHeight: 'auto', border: 'none' }}
-                            title="Card View"
-                        >
-                            <LayoutGrid size={14} />
-                        </button>
-                    </div>
                     <button className="btn btn-ghost btn-sm" onClick={fetchOrders} style={{ flexShrink: 0, padding: '4px 8px' }}>
                         <RefreshCw size={14} /> <span className="hide-mobile" style={{ fontSize: '11px' }}>Refresh</span>
                     </button>
@@ -375,256 +356,161 @@ export default function OrderHistory({ onMenuClick }) {
                         </div>
                     ) : (
                         <div className="card-body" style={{ padding: 0 }}>
-                            {viewMode === 'table' && (
-                                <div className="table-container" style={{ border: 'none' }}>
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Order ID</th>
-                                                <th>Customer Name</th>
-                                                <th className="hide-tablet">Phone Number</th>
-                                                <th>Delivery Date</th>
-                                                <th>Total</th>
-                                                <th>Advance</th>
-                                                <th>Balance</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filtered.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--gray)' }}>
-                                                        No orders found
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {filtered.map(o => {
-                                                const isOverdueRow = o.status !== 'Delivered' && o.delivery_date < todayStr;
-                                                return (
-                                                <tr key={o.order_id} style={isOverdueRow ? { background: 'rgba(183,28,28,0.04)' } : {}}>
-                                                    <td>
-                                                        {o.isOfflineQueue ? (
-                                                            <span style={{ fontWeight: 700, color: '#E65100', fontSize: 13 }} title="Pending Sync">Pending Sync</span>
-                                                        ) : (
-                                                            <span style={{ fontWeight: 700, color: 'var(--maroon)' }}>#{String(o.order_number || o.order_id).padStart(4, '0')}</span>
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        <Link to={`/customer/${o.customer_id}`} state={{ from: location.pathname + location.search }} style={{ color: 'inherit', textDecoration: 'none' }}>
-                                                            <div style={{ fontWeight: 600 }}>{o.customer_name}</div>
-                                                        </Link>
-                                                    </td>
-                                                    <td className="hide-tablet" style={{ fontSize: '13px' }}>{o.phone_number}</td>
-                                                    <td style={{ color: new Date(o.delivery_date) < new Date() && o.status !== 'Delivered' ? '#E65100' : 'inherit', fontWeight: 500 }}>
-                                                        {formatDate(o.delivery_date)}
-                                                    </td>
-                                                     <td><strong>{`\u20b9${parseFloat(o.total_amount).toLocaleString('en-IN')}`}</strong></td>
-                                                     <td>
-                                                         {editingAdvanceId === o.order_id ? (
-                                                             <div className="flex gap-2">
-                                                                 <input
-                                                                     type="number"
-                                                                     className="form-input"
-                                                                     style={{ width: 80, padding: '4px 8px', fontSize: '12px' }}
-                                                                     value={tempAdvanceValue}
-                                                                     onChange={e => setTempAdvanceValue(e.target.value)}
-                                                                     onKeyDown={e => e.key === 'Enter' && handleAdvanceUpdate(o.order_id)}
-                                                                     autoFocus
-                                                                 />
-                                                                 <button className="btn btn-sm btn-ghost p-0" onClick={() => handleAdvanceUpdate(o.order_id)}>
-                                                                     <Check size={16} color="#2E7D32" />
-                                                                 </button>
-                                                                 <button className="btn btn-sm btn-ghost p-0" onClick={() => setEditingAdvanceId(null)}>
-                                                                     <X size={16} color="#D32F2F" />
-                                                                 </button>
-                                                             </div>
-                                                         ) : (
-                                                             <div className="flex gap-2 items-center group">
-                                                                 {`\u20b9${parseFloat(o.advance_paid).toLocaleString('en-IN')}`}
-                                                                 {!o.isOfflineQueue && (
-                                                                 <button
-                                                                     className="btn btn-sm btn-ghost p-0 opacity-0 group-hover:opacity-100"
-                                                                     onClick={() => { setEditingAdvanceId(o.order_id); setTempAdvanceValue(o.advance_paid); }}
-                                                                 >
-                                                                     <Edit2 size={12} />
-                                                                 </button>
-                                                                 )}
-                                                             </div>
-                                                         )}
-                                                     </td>
-                                                    <td style={{ color: parseFloat(o.balance_amount) > 0 ? '#E65100' : '#2E7D32', fontWeight: 600 }}>
-                                                        {`\u20b9${parseFloat(o.balance_amount).toLocaleString('en-IN')}`}
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            className="form-select"
-                                                            style={{ padding: '4px 8px', fontSize: '13px', width: '120px' }}
-                                                            value={o.status}
-                                                            disabled={updatingId === o.order_id}
-                                                            onChange={e => handleStatusChange(o.order_id, e.target.value)}
-                                                        >
-                                                            <option>Pending</option>
-                                                            <option>Ready</option>
-                                                            <option>Delivered</option>
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <div className="flex gap-8">
-                                                            <Link to={`/bill/${o.order_id}`} className="btn btn-sm btn-outline">
-                                                                <Eye size={14} /> Bill
-                                                            </Link>
-
-                                                            {!o.isOfflineQueue && o.status === 'Delivered' && (
-                                                                <button
-                                                                    className="btn btn-sm btn-maroon"
-                                                                    title="Send Request Review"
-                                                                    onClick={(e) => { e.stopPropagation(); handleWhatsAppReview(o); }}
-                                                                >
-                                                                    Review
-                                                                </button>
-                                                            )}
-                                                            {!o.isOfflineQueue && (
-                                                                <button 
-                                                                    className="btn btn-sm btn-danger" 
-                                                                    title="Delete Order"
-                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(o.order_id); }}
-                                                                    disabled={updatingId === o.order_id}
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {viewMode === 'cards' && (
-                                <div className="mobile-cards" style={{ padding: 16 }}>
+                            {/* Card View */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, padding: 16 }}>
                                     {filtered.length === 0 && (
-                                        <div className="empty-state">No orders found</div>
+                                        <div className="empty-state" style={{ gridColumn: '1 / -1' }}>No orders found</div>
                                     )}
-                                    {filtered.map(o => (
-                                        <div key={o.order_id} className="order-card">
-                                            <div className="order-card-header">
-                                                <span className="order-card-id">#{String(o.order_number || o.order_id).padStart(4, '0')}</span>
-                                                <select
-                                                    className="form-select"
-                                                    style={{ padding: '4px 8px', fontSize: 12, width: 100 }}
-                                                    value={o.status}
-                                                    disabled={updatingId === o.order_id}
-                                                    onChange={e => handleStatusChange(o.order_id, e.target.value)}
-                                                >
-                                                    <option>Pending</option>
-                                                    <option>Ready</option>
-                                                    <option>Delivered</option>
-                                                </select>
-                                            </div>
-                                            <div className="order-card-body">
-                                                <div className="order-card-item" style={{ gridColumn: 'span 2' }}>
-                                                    <span className="order-card-label">Customer</span>
-                                                    <span className="order-card-value">{o.customer_name}</span>
-                                                </div>
-                                                <div className="order-card-item">
-                                                    <span className="order-card-label">Phone</span>
-                                                    <span className="order-card-value text-gray">{o.phone_number}</span>
-                                                </div>
-                                                <div className="order-card-item">
-                                                    <span className="order-card-label">Delivery</span>
-                                                    <span className="order-card-value" style={{ color: new Date(o.delivery_date) < new Date() && o.status !== 'Delivered' ? '#E65100' : 'inherit' }}>
-                                                        {formatDate(o.delivery_date)}
-                                                    </span>
-                                                </div>
-                                                 <div className="order-card-item">
-                                                     <span className="order-card-label">Advance</span>
-                                                     <span className="order-card-value" style={{ color: '#2E7D32' }}>
-                                                         {editingAdvanceId === o.order_id ? (
-                                                             <div className="flex gap-4 mt-4">
-                                                                 <input
-                                                                     type="number"
-                                                                     className="form-input"
-                                                                     style={{ width: 70, padding: '2px 4px', fontSize: 12, height: 28 }}
-                                                                     value={tempAdvanceValue}
-                                                                     onChange={e => setTempAdvanceValue(e.target.value)}
-                                                                 />
-                                                                 <button className="btn btn-sm btn-primary p-4" style={{ minHeight: 'auto' }} onClick={() => handleAdvanceUpdate(o.order_id)}>
-                                                                     <Check size={14} />
-                                                                 </button>
-                                                                 <button className="btn btn-sm btn-ghost p-4" style={{ minHeight: 'auto' }} onClick={() => setEditingAdvanceId(null)}>
-                                                                     <X size={14} />
-                                                                 </button>
-                                                             </div>
-                                                         ) : (
-                                                             <div className="flex-between w-full">
-                                                                 {`\u20b9${parseFloat(o.advance_paid).toLocaleString('en-IN')}`}
-                                                                 {!o.isOfflineQueue && (
-                                                                 <button
-                                                                     className="btn btn-sm btn-ghost p-0"
-                                                                     onClick={() => { setEditingAdvanceId(o.order_id); setTempAdvanceValue(o.advance_paid); }}
-                                                                 >
-                                                                     <Edit2 size={12} />
-                                                                 </button>
-                                                                 )}
-                                                             </div>
-                                                         )}
-                                                     </span>
-                                                 </div>
-                                                 <div className="order-card-item">
-                                                     <span className="order-card-label">Total Amount</span>
-                                                     <span className="order-card-value" style={{ fontWeight: 700 }}>{`\u20b9${parseFloat(o.total_amount).toLocaleString('en-IN')}`}</span>
-                                                 </div>
-                                                <div className="order-card-item">
-                                                    <span className="order-card-label">Balance</span>
-                                                    <span className="order-card-value" style={{ color: parseFloat(o.balance_amount) > 0 ? '#E65100' : '#2E7D32', fontWeight: 700 }}>
-                                                        {`\u20b9${parseFloat(o.balance_amount).toLocaleString('en-IN')}`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="order-card-actions">
-                                                <Link to={`/customer/${o.customer_id}`} state={{ from: location.pathname + location.search }} className="btn btn-sm btn-outline">
-                                                    <User size={14} /> Measurements
-                                                </Link>
-                                                <Link to={`/bill/${o.order_id}`} className="btn btn-sm btn-outline">
-                                                    <Eye size={12} /> Bill
-                                                </Link>
-                                                {!o.isOfflineQueue && (
-                                                    <Link
-                                                        to={`/edit-order/${o.order_id}`}
-                                                        className="btn btn-sm btn-outline"
-                                                        style={{ borderColor: 'var(--maroon)', color: 'var(--maroon)', fontWeight: 600 }}
+                                    {filtered.map(o => {
+                                        const isOverdue = o.status !== 'Delivered' && o.delivery_date < todayStr;
+                                        return (
+                                            <div key={o.order_id} className="order-card card p-16" style={{
+                                                borderLeft: `4px solid ${isOverdue ? '#B71C1C' : 'var(--maroon)'}`,
+                                                background: '#fff'
+                                            }}>
+                                                <div className="order-card-header flex-between pb-8 mb-12" style={{ borderBottom: '1px solid var(--gray-light)' }}>
+                                                    <div className="flex gap-6 items-center">
+                                                        <span className="order-card-id" style={{ fontSize: 15, fontWeight: 700, color: 'var(--maroon)' }}>
+                                                            #{String(o.order_number || o.order_id).padStart(4, '0')}
+                                                        </span>
+                                                        {o.isOfflineQueue && (
+                                                            <span className="badge badge-warning" style={{ fontSize: 10 }}>Pending Sync</span>
+                                                        )}
+                                                        {isOverdue && (
+                                                            <span className="badge badge-overdue" style={{ fontSize: 10 }}>Overdue</span>
+                                                        )}
+                                                    </div>
+                                                    <select
+                                                        className="form-select"
+                                                        style={{ padding: '4px 8px', fontSize: 12, width: 110, fontWeight: 600 }}
+                                                        value={o.status}
+                                                        disabled={updatingId === o.order_id}
+                                                        onChange={e => handleStatusChange(o.order_id, e.target.value)}
                                                     >
-                                                        <Edit2 size={12} /> Edit Bill
+                                                        <option>Pending</option>
+                                                        <option>Ready</option>
+                                                        <option>Delivered</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="order-card-body">
+                                                    <div className="order-card-item" style={{ gridColumn: 'span 2', marginBottom: 6 }}>
+                                                        <span className="order-card-label">Customer Name</span>
+                                                        <Link to={`/customer/${o.customer_id}`} state={{ from: location.pathname + location.search }} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                            <span className="order-card-value" style={{ fontSize: 16, fontWeight: 700, color: 'var(--maroon-dark)' }}>
+                                                                {o.customer_name}
+                                                            </span>
+                                                        </Link>
+                                                    </div>
+
+                                                    <div className="order-card-item">
+                                                        <span className="order-card-label">Phone Number</span>
+                                                        <span className="order-card-value" style={{ fontWeight: 600 }}>{o.phone_number}</span>
+                                                    </div>
+
+                                                    <div className="order-card-item">
+                                                        <span className="order-card-label">Delivery Date</span>
+                                                        <span className="order-card-value" style={{ color: isOverdue ? '#B71C1C' : 'inherit', fontWeight: 700 }}>
+                                                            {formatDate(o.delivery_date)}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="order-card-item">
+                                                        <span className="order-card-label">Total Amount</span>
+                                                        <span className="order-card-value" style={{ fontWeight: 700, fontSize: 15 }}>
+                                                            &#8377;{parseFloat(o.total_amount).toLocaleString('en-IN')}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="order-card-item">
+                                                        <span className="order-card-label">Advance Paid</span>
+                                                        <span className="order-card-value" style={{ color: '#2E7D32', fontWeight: 600 }}>
+                                                            {editingAdvanceId === o.order_id ? (
+                                                                <div className="flex gap-4 items-center mt-2">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="form-input"
+                                                                        style={{ width: 75, padding: '2px 6px', fontSize: 12, height: 26 }}
+                                                                        value={tempAdvanceValue}
+                                                                        onChange={e => setTempAdvanceValue(e.target.value)}
+                                                                        onKeyDown={e => e.key === 'Enter' && handleAdvanceUpdate(o.order_id)}
+                                                                        autoFocus
+                                                                    />
+                                                                    <button className="btn btn-sm btn-primary p-4" style={{ minHeight: 'auto' }} onClick={() => handleAdvanceUpdate(o.order_id)}>
+                                                                        <Check size={12} />
+                                                                    </button>
+                                                                    <button className="btn btn-sm btn-ghost p-4" style={{ minHeight: 'auto' }} onClick={() => setEditingAdvanceId(null)}>
+                                                                        <X size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex gap-4 items-center">
+                                                                    <span>&#8377;{parseFloat(o.advance_paid).toLocaleString('en-IN')}</span>
+                                                                    {!o.isOfflineQueue && (
+                                                                        <button
+                                                                            className="btn btn-sm btn-ghost p-0"
+                                                                            style={{ border: 'none', background: 'transparent' }}
+                                                                            onClick={() => { setEditingAdvanceId(o.order_id); setTempAdvanceValue(o.advance_paid); }}
+                                                                            title="Edit Advance"
+                                                                        >
+                                                                            <Edit2 size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="order-card-item" style={{ gridColumn: 'span 2', background: 'var(--ivory)', padding: '8px 12px', borderRadius: 8, marginTop: 4 }}>
+                                                        <div className="flex-between">
+                                                            <span className="order-card-label" style={{ margin: 0 }}>Balance Pending</span>
+                                                            <span className="order-card-value" style={{ color: parseFloat(o.balance_amount) > 0 ? '#B71C1C' : '#2E7D32', fontWeight: 800, fontSize: 15 }}>
+                                                                &#8377;{parseFloat(o.balance_amount).toLocaleString('en-IN')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="order-card-actions flex gap-6 flex-wrap justify-end pt-12 mt-12" style={{ borderTop: '1px solid var(--gray-light)' }}>
+                                                    <Link to={`/customer/${o.customer_id}`} state={{ from: location.pathname + location.search }} className="btn btn-sm btn-outline">
+                                                        <User size={13} /> Measurements
                                                     </Link>
-                                                )}
-                                                {!o.isOfflineQueue && o.status === 'Delivered' && (
-                                                    <button
-                                                        className="btn btn-sm btn-outline"
-                                                        style={{ borderColor: '#2E7D32', color: '#2E7D32' }}
-                                                        onClick={() => handleWhatsAppReview(o)}
-                                                    >
-                                                        Review
-                                                    </button>
-                                                )}
-                                                {!o.isOfflineQueue && (
-                                                <button
-                                                    className="btn btn-sm btn-danger"
-                                                    title="Delete Order"
-                                                    onClick={() => handleDelete(o.order_id)}
-                                                    disabled={updatingId === o.order_id}
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                                )}
+                                                    <Link to={`/bill/${o.order_id}`} className="btn btn-sm btn-outline">
+                                                        <Eye size={13} /> Bill
+                                                    </Link>
+                                                    {!o.isOfflineQueue && (
+                                                        <Link
+                                                            to={`/edit-order/${o.order_id}`}
+                                                            className="btn btn-sm btn-outline"
+                                                            style={{ borderColor: 'var(--maroon)', color: 'var(--maroon)', fontWeight: 600 }}
+                                                        >
+                                                            <Edit2 size={13} /> Edit Bill
+                                                        </Link>
+                                                    )}
+                                                    {!o.isOfflineQueue && o.status === 'Delivered' && (
+                                                        <button
+                                                            className="btn btn-sm btn-outline"
+                                                            style={{ borderColor: '#2E7D32', color: '#2E7D32' }}
+                                                            onClick={() => handleWhatsAppReview(o)}
+                                                        >
+                                                            Review
+                                                        </button>
+                                                    )}
+                                                    {!o.isOfflineQueue && (
+                                                        <button
+                                                            className="btn btn-sm btn-danger"
+                                                            title="Delete Order"
+                                                            onClick={() => handleDelete(o.order_id)}
+                                                            disabled={updatingId === o.order_id}
+                                                        >
+                                                            <Trash2 size={13} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
-                            )}
                         </div>
                     )}
                 </div>

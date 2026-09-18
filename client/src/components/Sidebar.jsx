@@ -69,7 +69,6 @@ export default function Sidebar({ isOpen, onClose, auth, setAuth }) {
         { to: '/analytics',   icon: LineChart,       label: 'Analytics',       show: isAdmin },
         { to: '/profits',     icon: DollarSign,      label: 'Profits',         show: isAdmin },
         { to: '/settings',    icon: Settings,        label: 'Boutique Settings', show: isAdmin },
-        { to: '/subscribe',   icon: Crown,           label: '👑 Subscribe to Premium', show: isAdmin && !isPaidPremium },
     ];
 
     const handleLogout = () => {

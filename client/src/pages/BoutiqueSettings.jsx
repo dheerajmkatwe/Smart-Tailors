@@ -368,46 +368,23 @@ export default function BoutiqueSettings({ onMenuClick }) {
                             </div>
                         </div>
 
-                        <div className="form-group mb-16" style={{ background: 'rgba(198,167,94,0.04)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(198,167,94,0.15)', position: 'relative' }}>
+                        <div className="form-group mb-24" style={{ background: 'rgba(198,167,94,0.04)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(198,167,94,0.15)', position: 'relative' }}>
                             <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <label className="form-label" style={{ color: 'var(--maroon-dark)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                                     Dynamic UPI ID (Scan to Pay)
-                                    {!isPremium && <span className="premium-badge-span" style={{ fontSize: '9px', background: 'var(--gold)', color: 'var(--maroon-dark)', padding: '2px 6px', borderRadius: '12px', fontWeight: 'bold' }}>👑 PREMIUM</span>}
                                 </label>
                             </div>
                             <p style={{ fontSize: '11px', color: 'var(--gray)', margin: '4px 0 8px' }}>
                                 Pre-populates exact balance amounts on customer bill PDF QR codes.
                             </p>
-                            <div className="input-prefix" style={{ background: isPremium ? '#fff' : '#f5f5f7', opacity: isPremium ? 1 : 0.8 }}>
+                            <div className="input-prefix" style={{ background: '#fff' }}>
                                 <span className="prefix-symbol"><CreditCard size={16} style={{ color: 'var(--gold)' }} /></span>
                                 <input
                                     type="text"
                                     name="upi_id"
                                     className="form-input"
-                                    placeholder={isPremium ? "e.g. elegantcouture@okaxis" : "e.g. elegantcouture@okaxis (Premium Only)"}
-                                    value={isPremium ? (profile.upi_id || '') : ''}
-                                    onChange={handleProfileChange}
-                                    disabled={!isPremium}
-                                    style={{ border: 'none', background: 'transparent', cursor: isPremium ? 'text' : 'not-allowed' }}
-                                />
-                            </div>
-                            {!isPremium && (
-                                <p style={{ fontSize: '10px', color: 'var(--maroon)', margin: '6px 0 0', fontWeight: '500' }}>
-                                    🔒 UPI Payment QR Code is locked under the Free plan. Upgrade to Premium to enable!
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="form-group mb-24">
-                            <label className="form-label">GST / Tax Identification ID (Optional)</label>
-                            <div className="input-prefix">
-                                <span className="prefix-symbol"><Landmark size={16} /></span>
-                                <input
-                                    type="text"
-                                    name="gst_id"
-                                    className="form-input"
-                                    placeholder="Enter GST number"
-                                    value={profile.gst_id || ''}
+                                    placeholder="e.g. elegantcouture@okaxis"
+                                    value={profile.upi_id || ''}
                                     onChange={handleProfileChange}
                                     style={{ border: 'none', background: 'transparent' }}
                                 />
@@ -473,62 +450,40 @@ export default function BoutiqueSettings({ onMenuClick }) {
                         </div>
 
                         {/* Add Branch Inline Form */}
-                        {subscriptionType !== 'Yearly' && branches.length >= 1 ? (
-                            <div style={{
-                                background: 'linear-gradient(135deg, rgba(198,167,94,0.08), rgba(198,167,94,0.03))',
-                                border: '1px solid rgba(198,167,94,0.3)',
-                                borderRadius: '8px',
-                                padding: '14px',
-                                marginBottom: '24px',
-                                textAlign: 'center'
-                            }}>
-                                <Crown size={22} style={{ color: 'var(--gold)', margin: '0 auto 6px', display: 'block' }} />
-                                <strong style={{ fontSize: '13px', color: 'var(--maroon-dark)', display: 'block', marginBottom: '4px' }}>
-                                    Yearly Plan Exclusive Feature
-                                </strong>
-                                <p style={{ fontSize: '11px', color: 'var(--gray)', margin: '0 0 10px', lineHeight: '1.4' }}>
-                                    Multi-Branch &amp; Chain Boutique Support is exclusive to our Yearly Subscription plan. Upgrade to manage multiple outlets seamlessly!
-                                </p>
-                                <a href="/subscribe" className="btn btn-secondary btn-xs" style={{ display: 'inline-flex', background: 'var(--gold)', color: '#4A101C', fontWeight: 'bold', border: 'none', padding: '6px 12px' }}>
-                                    👑 Upgrade to Yearly
-                                </a>
-                            </div>
-                        ) : (
-                            <form onSubmit={addBranch} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', background: '#fafafa', padding: '14px', borderRadius: '8px', border: '1px solid #eee' }}>
-                                <h3 style={{ fontSize: '13px', margin: '0', color: 'var(--maroon-dark)', fontWeight: 700 }}>Add Location / Branch</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <form onSubmit={addBranch} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', background: '#fafafa', padding: '14px', borderRadius: '8px', border: '1px solid #eee' }}>
+                            <h3 style={{ fontSize: '13px', margin: '0', color: 'var(--maroon-dark)', fontWeight: 700 }}>Add Location / Branch</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Branch Name (e.g. Jubilee Hills Outlet)"
+                                    value={newBranchName}
+                                    onChange={e => setNewBranchName(e.target.value)}
+                                    style={{ fontSize: '12.5px' }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                     <input
                                         type="text"
                                         className="form-input"
-                                        placeholder="Branch Name (e.g. Jubilee Hills Outlet)"
-                                        value={newBranchName}
-                                        onChange={e => setNewBranchName(e.target.value)}
-                                        style={{ fontSize: '12.5px' }}
+                                        placeholder="Address"
+                                        value={newBranchAddress}
+                                        onChange={e => setNewBranchAddress(e.target.value)}
+                                        style={{ flex: 2, fontSize: '12.5px' }}
                                     />
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="Address"
-                                            value={newBranchAddress}
-                                            onChange={e => setNewBranchAddress(e.target.value)}
-                                            style={{ flex: 2, fontSize: '12.5px' }}
-                                        />
-                                        <input
-                                            type="tel"
-                                            className="form-input"
-                                            placeholder="Contact No"
-                                            value={newBranchPhone}
-                                            onChange={e => setNewBranchPhone(e.target.value)}
-                                            style={{ flex: 1, fontSize: '12.5px' }}
-                                        />
-                                    </div>
+                                    <input
+                                        type="tel"
+                                        className="form-input"
+                                        placeholder="Contact No"
+                                        value={newBranchPhone}
+                                        onChange={e => setNewBranchPhone(e.target.value)}
+                                        style={{ flex: 1, fontSize: '12.5px' }}
+                                    />
                                 </div>
-                                <button type="submit" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-end', background: 'var(--gold)', color: '#4A101C', fontWeight: 'bold' }} disabled={addingBranch}>
-                                    <Plus size={14} style={{ marginRight: 4 }} /> Add Branch
-                                </button>
-                            </form>
-                        )}
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-end', background: 'var(--gold)', color: '#4A101C', fontWeight: 'bold' }} disabled={addingBranch}>
+                                <Plus size={14} style={{ marginRight: 4 }} /> Add Branch
+                            </button>
+                        </form>
 
                         {/* Branches List */}
                         <div className="branches-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -720,81 +675,7 @@ export default function BoutiqueSettings({ onMenuClick }) {
                         </div>
                     </div>
 
-                    {/* 4. Subscription Status Card */}
-                    <div className="card" style={{ padding: '24px', height: 'fit-content' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                            <Crown size={20} style={{ color: 'var(--gold)' }} />
-                            <h2 style={{ fontSize: '18px', color: 'var(--maroon-dark)', margin: 0 }}>Subscription Status</h2>
-                        </div>
 
-                        {(() => {
-                            const createdAt = auth?.created_at ? new Date(auth.created_at) : null;
-                            const trialExpiry = createdAt ? new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
-                            const now = new Date();
-                            const daysLeft = trialExpiry ? Math.max(0, Math.ceil((trialExpiry - now) / (1000 * 60 * 60 * 24))) : 0;
-                            const isOnTrial = subscriptionType === 'Free' && trialExpiry && now <= trialExpiry;
-
-                            if (subscriptionType === 'Monthly' || subscriptionType === 'Yearly') {
-                                return (
-                                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #d4af37, #f5e17c)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                                            <Sparkles size={26} style={{ color: '#4A101C' }} />
-                                        </div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--maroon-dark)', marginBottom: 4 }}>✨ Premium {subscriptionType} Active</div>
-                                        <p style={{ fontSize: 13, color: 'var(--gray)', margin: 0 }}>You have full unrestricted access to all Premium features, extra measurements, custom UPI billing QR codes, and extended media storage.</p>
-                                    </div>
-                                );
-                            } else if (isOnTrial) {
-                                return (
-                                    <div>
-                                        <div style={{ background: 'linear-gradient(135deg, #e8f5e9, #f1f8e9)', border: '1px solid #a5d6a7', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                                <Crown size={18} style={{ color: '#2e7d32' }} />
-                                                <span style={{ fontWeight: 700, color: '#1b5e20', fontSize: 15 }}>🎉 New User Free Trial Active</span>
-                                            </div>
-                                            <p style={{ fontSize: 13, color: '#2e7d32', margin: '0 0 12px' }}>Enjoy all Premium features for your first 30 days — no payment required!</p>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.7)', borderRadius: 8, padding: '10px 14px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#388e3c', fontSize: 13 }}>
-                                                    <Calendar size={15} />
-                                                    <span>Trial Expires:</span>
-                                                </div>
-                                                <strong style={{ color: '#1b5e20', fontSize: 14 }}>
-                                                    {trialExpiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                </strong>
-                                            </div>
-                                            <div style={{ marginTop: 10, height: 6, background: '#c8e6c9', borderRadius: 99, overflow: 'hidden' }}>
-                                                <div style={{ height: '100%', background: 'linear-gradient(90deg, #43a047, #81c784)', width: `${Math.round((daysLeft / 30) * 100)}%`, transition: 'width 0.4s' }} />
-                                            </div>
-                                            <p style={{ fontSize: 11, color: '#388e3c', margin: '6px 0 0', textAlign: 'right' }}>{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
-                                        </div>
-                                        <p style={{ fontSize: 12, color: 'var(--gray)', textAlign: 'center' }}>After the trial ends, your account will switch to the Free plan. Subscribe before it expires to keep all features!</p>
-                                    </div>
-                                );
-                            } else {
-                                return (
-                                    <div>
-                                        <div style={{ background: 'linear-gradient(135deg, #fff3e0, #fce4ec)', border: '1px solid #ffccbc', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                                <AlertCircle size={18} style={{ color: '#bf360c' }} />
-                                                <span style={{ fontWeight: 700, color: '#bf360c', fontSize: 15 }}>Free Plan — Limited Access</span>
-                                            </div>
-                                            <p style={{ fontSize: 13, color: '#6d4c41', margin: 0 }}>Your free trial has ended. You are now on the Free plan with limited features.</p>
-                                        </div>
-                                        <ul style={{ fontSize: 12.5, color: 'var(--gray)', paddingLeft: 18, margin: '0 0 16px', lineHeight: '1.8' }}>
-                                            <li>Max 30 orders per month</li>
-                                            <li>No extra blouse/chudhidhar measurements</li>
-                                            <li>Max 3 service types per order</li>
-                                            <li>Only 1 design photo &amp; 1 scratch pad note</li>
-                                            <li>No UPI QR code for payments</li>
-                                            <li>Watermark on bill PDF</li>
-                                            <li>Analytics limited to current month only</li>
-                                        </ul>
-                                        <a href="/subscribe" style={{ display: 'block', textAlign: 'center', background: 'linear-gradient(135deg, #4A101C, #6A1E2E)', color: '#fff', padding: '11px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>👑 Upgrade to Premium</a>
-                                    </div>
-                                );
-                            }
-                        })()}
-                    </div>
 
                 </div>
             </div>
