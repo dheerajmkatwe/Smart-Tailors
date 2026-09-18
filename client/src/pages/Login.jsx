@@ -206,7 +206,8 @@ export default function Login({ setAuth }) {
                     @keyframes slideInRight { from{opacity:0;transform:translateX(30px);} to{opacity:1;transform:translateX(0);} }
                     @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
                     @keyframes spin { to{transform:rotate(360deg);} }
-                    @media(max-width:768px) { .login-brand-panel { display: none !important; } .login-right { border-radius: 0 !important; min-height: 100vh !important; } }
+                    @media(max-width:768px) { .login-brand-panel { display: none !important; } .login-right { border-radius: 0 !important; min-height: 100vh !important; } .login-mobile-logo { display: flex !important; } }
+                    .login-mobile-logo { display: none; justify-content: center; margin-bottom: 20px; }
                     .auth-mode-btn { transition: all 0.2s ease; border: none; cursor: pointer; border-radius: 10px; padding: 10px 8px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
                     .auth-mode-btn.active { background: linear-gradient(135deg, #6A1E2E, #4A101C); color: #fff; box-shadow: 0 4px 12px rgba(74,16,28,0.3); }
                     .auth-mode-btn.inactive { background: transparent; color: rgba(255,255,255,0.5); }
@@ -398,6 +399,9 @@ export default function Login({ setAuth }) {
                         <>
                             {/* Header */}
                             <div style={{ marginBottom: 32, textAlign: 'center' }}>
+                                <div className="login-mobile-logo">
+                                    <img src="/logo.png" alt="Smart Tailor Logo" style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 6px 20px rgba(212,175,55,0.35))' }} />
+                                </div>
                                 <h2 style={{ fontFamily: '"Playfair Display", serif', fontSize: 26, color: '#fff', margin: '0 0 6px', fontWeight: 400 }}>
                                     Welcome Back
                                 </h2>

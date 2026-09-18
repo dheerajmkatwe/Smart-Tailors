@@ -94,7 +94,7 @@ export default function Sidebar({ isOpen, onClose, auth, setAuth }) {
                 {auth?.shop_logo ? (
                     <img src={auth.shop_logo} alt="Shop Logo" style={{ width: 58, height: 58, margin: '0 auto 10px', borderRadius: '10px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }} />
                 ) : (
-                    <div className="logo-circle">ST</div>
+                    <img src="/logo.png" alt="Smart Tailor Logo" style={{ width: 58, height: 58, margin: '0 auto 10px', borderRadius: '50%', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(212,175,55,0.3))' }} />
                 )}
                 <span className="logo-name">{auth?.shop_name || 'SMART TAILOR'}</span>
                 <span className="logo-tagline">{isAdmin ? 'Admin Portal' : 'Worker Portal'}</span>

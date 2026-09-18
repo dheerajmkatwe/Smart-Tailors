@@ -187,13 +187,8 @@ export default function Register() {
 
                     {/* Header */}
                     <div style={{ marginBottom: 32, textAlign: 'center' }}>
-                        <div style={{
-                            width: 52, height: 52, borderRadius: '14px',
-                            background: 'linear-gradient(135deg, #d4af37, #f5e17c)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            margin: '0 auto 16px', boxShadow: '0 6px 20px rgba(212,175,55,0.25)'
-                        }}>
-                            <Store size={24} style={{ color: '#4A101C' }} />
+                        <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
+                            <img src="/logo.png" alt="Smart Tailor Logo" style={{ width: 72, height: 72, objectFit: 'contain', filter: 'drop-shadow(0 6px 20px rgba(212,175,55,0.35))' }} />
                         </div>
                         <h2 style={{ fontFamily: '"Playfair Display", serif', fontSize: 26, color: '#fff', margin: '0 0 6px', fontWeight: 400 }}>
                             Register Your Boutique
