@@ -175,6 +175,24 @@ export default function Dashboard({ onMenuClick, auth }) {
     const [loading, setLoading] = useState(true);
     const [activeKpiCategory, setActiveKpiCategory] = useState(null);
     const [isOverviewModalOpen, setIsOverviewModalOpen] = useState(false);
+    const [trialInfo, setTrialInfo] = useState({
+        subscription_type: auth?.subscription_type || 'Free',
+        subscription_expires_at: auth?.subscription_expires_at || null,
+        created_at: auth?.created_at || null,
+    });
+
+    // Always fetch fresh trial info from server on mount — never trust stale localStorage
+    useEffect(() => {
+        api.get('/auth/premium-status')
+            .then(res => {
+                setTrialInfo({
+                    subscription_type: res.data.subscription_type || 'Free',
+                    subscription_expires_at: res.data.subscription_expires_at || null,
+                    created_at: res.data.created_at || null,
+                });
+            })
+            .catch(() => {}); // silently fail — pill simply won't show
+    }, []);
 
     const loadDashboardData = useCallback(() => {
         return Promise.all([
@@ -250,8 +268,8 @@ export default function Dashboard({ onMenuClick, auth }) {
                     </div>
                 </div>
 
-                {/* Centre: Trial Pill */}
-                <TrialPill auth={auth} />
+                {/* Centre: Trial Pill — fed by fresh server data */}
+                <TrialPill auth={trialInfo} />
 
                 {/* Create New Order Button */}
                 <Link to="/new-order" className="btn btn-primary topbar-create-order-btn" style={{
