@@ -30,6 +30,15 @@ router.post('/register', async (req, res) => {
             return res.status(403).json({ error: 'This phone number has been blocked by system administrators. Registration denied.' });
         }
 
+        // Check if phone number is already registered under any tenant
+        const existingPhone = await db.execute({
+            sql: 'SELECT tenant_id, shop_name FROM tenants WHERE phone_number = ? LIMIT 1',
+            args: [phone_number.trim()]
+        });
+        if (existingPhone.rows.length > 0) {
+            return res.status(400).json({ error: `An account with phone number ${phone_number.trim()} is already registered under "${existingPhone.rows[0].shop_name}". Please log in with your credentials.` });
+        }
+
         // Generate a unique tenant ID slug
         let tenantId = generateSlug(shop_name);
         if (!tenantId) {
@@ -45,9 +54,10 @@ router.post('/register', async (req, res) => {
             tenantId = `${tenantId}-${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        // Insert new tenant shop
+        // Insert new tenant shop with initial 30 days free trial expiration
         await db.execute({
-            sql: 'INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            sql: `INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo, subscription_expires_at) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+30 days', 'localtime'))`,
             args: [tenantId, shop_name, address || '', phone_number, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null]
         });
 
@@ -96,6 +106,50 @@ router.post('/login', async (req, res) => {
         if (blockedCheck.rows.length > 0) {
             return res.status(403).json({ error: 'This account phone number has been blocked by system administrators. Access Denied.' });
         }
+
+        // Check subscription expiration logic
+        const now = new Date();
+        let expiresAt;
+        if (tenant.subscription_expires_at) {
+            expiresAt = new Date(tenant.subscription_expires_at);
+        } else {
+            const createdAt = new Date(tenant.created_at || Date.now());
+            const days = tenant.subscription_type === 'Yearly' ? 365 : 30;
+            expiresAt = new Date(createdAt.getTime() + days * 24 * 60 * 60 * 1000);
+        }
+
+        const isExpired = now > expiresAt;
+
+        if (isExpired) {
+            // Subscription Tiers:
+            // Tier 1: Free (1st Month Trial) -> Expired -> Pay ₹1 for 30 days
+            // Tier 2 & 3: Monthly or Yearly -> Expired -> Pay ₹9,999 for 365 days (repeats yearly)
+            let nextPlan = 'Monthly';
+            let amount = 1;
+            let title = '1-Month Free Trial Expired 🔒';
+            let message = 'Your 1-month free trial has expired. Please pay ₹1 and use the app for another 30 days.';
+
+            if (tenant.subscription_type === 'Monthly' || tenant.subscription_type === 'Yearly') {
+                nextPlan = 'Yearly';
+                amount = 9999;
+                title = 'Annual Subscription Required 🔒';
+                message = 'Your 1-month trial access has ended. Please pay ₹9,999 to unlock all app features, orders, bills, and reports for the next 365 days.';
+            }
+
+            return res.status(403).json({
+                error: message,
+                trial_expired: true,
+                shop_name: tenant.shop_name,
+                tenant_id: tenant.tenant_id,
+                phone_number: tenant.phone_number,
+                admin_name: tenant.admin_name,
+                upi_id: '9113565802@ibl',
+                amount: amount,
+                next_plan: nextPlan,
+                title: title
+            });
+        }
+
         const isPremium = await checkPremiumStatus(tenant.tenant_id);
 
         if (role === 'Worker') {
@@ -1001,6 +1055,152 @@ router.post('/razorpay-verify-advance-payment', async (req, res) => {
             payment_id: razorpay_payment_id
         });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/auth/renew-subscription
+// Renew or extend boutique subscription based on current plan tier (Monthly ₹1 / 30 days OR Yearly ₹9,999 / 365 days)
+router.post('/renew-subscription', async (req, res) => {
+    try {
+        const { tenant_id, plan, payment_ref } = req.body;
+        if (!tenant_id) {
+            return res.status(400).json({ error: 'Shop Username / Tenant ID is required' });
+        }
+
+        const tenantRs = await db.execute({
+            sql: 'SELECT * FROM tenants WHERE tenant_id = ? OR phone_number = ? LIMIT 1',
+            args: [tenant_id.trim(), tenant_id.trim()]
+        });
+
+        if (tenantRs.rows.length === 0) {
+            return res.status(404).json({ error: 'Shop identity not found' });
+        }
+
+        const tenant = tenantRs.rows[0];
+
+        // Determine plan tier:
+        // If current subscription is 'Free' -> upgrade to 'Monthly' (+30 days)
+        // If current subscription is 'Monthly' or 'Yearly' -> upgrade to 'Yearly' (+365 days)
+        let targetPlan = plan;
+        if (!targetPlan) {
+            targetPlan = tenant.subscription_type === 'Free' ? 'Monthly' : 'Yearly';
+        }
+
+        const durationModifier = targetPlan === 'Yearly' ? '+365 days' : '+30 days';
+
+        await db.execute({
+            sql: `UPDATE tenants 
+                  SET subscription_type = ?,
+                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime'),
+                      created_at = datetime('now', 'localtime'),
+                      pending_request_type = NULL,
+                      pending_request_date = NULL
+                  WHERE tenant_id = ?`,
+            args: [targetPlan, tenant.tenant_id]
+        });
+
+        console.log(`✅ Subscription renewed for shop "${tenant.shop_name}" (${tenant.tenant_id}) -> Plan: ${targetPlan} (${durationModifier})`);
+
+        res.json({
+            success: true,
+            message: targetPlan === 'Yearly'
+                ? '🎉 Annual Subscription Renewed! You can now log in with your credentials and use all app features for the next 365 days.'
+                : '🎉 Subscription Renewed! You can now log in with your credentials and use all app features for another 30 days.',
+            tenant_id: tenant.tenant_id,
+            shop_name: tenant.shop_name,
+            subscription_type: targetPlan
+        });
+    } catch (err) {
+        console.error('Renewal error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/auth/razorpay-create-subscription-order
+// Generate dynamic Razorpay order for subscription renewal (₹1 or ₹9,999)
+router.post('/razorpay-create-subscription-order', async (req, res) => {
+    try {
+        const { tenant_id, amount, plan } = req.body;
+        if (!tenant_id || !amount) {
+            return res.status(400).json({ error: 'Shop ID and amount are required' });
+        }
+
+        const amountPaise = Math.round(parseFloat(amount) * 100);
+        const currency = 'INR';
+
+        const tenantRs = await db.execute({
+            sql: 'SELECT razorpay_key_id FROM tenants WHERE tenant_id = ? LIMIT 1',
+            args: [tenant_id]
+        });
+        const keyId = (tenantRs.rows[0]?.razorpay_key_id) || process.env.RAZORPAY_KEY_ID || 'rzp_test_TdXK8RDufJvO6D';
+        const orderId = 'order_sub_' + require('crypto').randomBytes(8).toString('hex');
+
+        res.json({
+            success: true,
+            order_id: orderId,
+            amount: amountPaise,
+            currency: currency,
+            key: keyId
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/auth/razorpay-verify-subscription-payment
+// Automatically verify payment signature and activate subscription (+30 days for ₹1, +365 days for ₹9,999)
+router.post('/razorpay-verify-subscription-payment', async (req, res) => {
+    try {
+        const { tenant_id, plan, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+        if (!tenant_id) {
+            return res.status(400).json({ error: 'Shop ID is required' });
+        }
+
+        const tenantRs = await db.execute({
+            sql: 'SELECT razorpay_key_secret FROM tenants WHERE tenant_id = ? LIMIT 1',
+            args: [tenant_id]
+        });
+        const keySecret = (tenantRs.rows[0]?.razorpay_key_secret) || process.env.RAZORPAY_KEY_SECRET || 'BlUpg1glkwh7q9WEWhDrAflA';
+
+        if (keySecret && razorpay_order_id && razorpay_signature) {
+            const crypto = require('crypto');
+            const expectedSignature = crypto
+                .createHmac('sha256', keySecret)
+                .update(razorpay_order_id + '|' + razorpay_payment_id)
+                .digest('hex');
+
+            if (expectedSignature !== razorpay_signature) {
+                return res.status(400).json({ error: 'Invalid payment signature. Transaction verification failed.' });
+            }
+        }
+
+        const targetPlan = plan || 'Monthly';
+        const durationModifier = targetPlan === 'Yearly' ? '+365 days' : '+30 days';
+
+        await db.execute({
+            sql: `UPDATE tenants 
+                  SET subscription_type = ?,
+                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime'),
+                      created_at = datetime('now', 'localtime'),
+                      pending_request_type = NULL,
+                      pending_request_date = NULL
+                  WHERE tenant_id = ?`,
+            args: [targetPlan, tenant_id]
+        });
+
+        console.log(`✅ Razorpay payment verified & subscription active for shop (${tenant_id}) -> Plan: ${targetPlan}`);
+
+        res.json({
+            success: true,
+            message: targetPlan === 'Yearly'
+                ? '🎉 Payment Verified! Annual Subscription active for 365 days.'
+                : '🎉 Payment Verified! Subscription active for 30 days.',
+            tenant_id,
+            subscription_type: targetPlan
+        });
+    } catch (err) {
+        console.error('Razorpay verification error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

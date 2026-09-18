@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Scissors, Lock, User, LogIn, Eye, EyeOff, ChevronRight, Sparkles } from 'lucide-react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { Scissors, Lock, User, LogIn, Eye, EyeOff, ChevronRight, Sparkles, QrCode, Copy, CheckCircle, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
+import QRCode from 'react-qr-code';
 import api from '../api/axios';
 
 export default function Login({ setAuth }) {
     const navigate = useNavigate();
-    const [username, setUsername] = useState('');
+    const [searchParams] = useSearchParams();
+    const [username, setUsername] = useState(searchParams.get('tenant_id') || '');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -16,6 +18,12 @@ export default function Login({ setAuth }) {
     const [workersList, setWorkersList] = useState([]);
     const [selectedWorker, setSelectedWorker] = useState('');
     const [loadingWorkers, setLoadingWorkers] = useState(false);
+
+    // Trial Expiry & Renewal State
+    const [expiredData, setExpiredData] = useState(null);
+    const [renewing, setRenewing] = useState(false);
+    const [copiedUpi, setCopiedUpi] = useState(false);
+    const [renewSuccessMsg, setRenewSuccessMsg] = useState('');
 
     useEffect(() => {
         if (authMode !== 'Worker' || !username.trim()) {
@@ -48,6 +56,7 @@ export default function Login({ setAuth }) {
             return;
         }
         setLoading(true);
+        setRenewSuccessMsg('');
         try {
             const res = await api.post('/auth/login', {
                 username: username.trim(),
@@ -61,12 +70,105 @@ export default function Login({ setAuth }) {
             toast.success(`Welcome back, ${user.name}! ✨`);
             navigate('/');
         } catch (err) {
-            toast.error(err.response?.data?.error || err.message || 'Login failed');
+            if (err.response?.data?.trial_expired) {
+                setExpiredData(err.response.data);
+                toast.error('Your 1-month free trial has expired! Please pay ₹1 to continue.');
+            } else {
+                toast.error(err.response?.data?.error || err.message || 'Login failed');
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const handleRenewSubscription = async () => {
+        if (!expiredData?.tenant_id) return;
+        setRenewing(true);
+        try {
+            const res = await api.post('/auth/renew-subscription', {
+                tenant_id: expiredData.tenant_id,
+                plan: expiredData.next_plan
+            });
+            if (res.data.success) {
+                toast.success('🎉 Subscription renewed successfully!');
+                setRenewSuccessMsg(res.data.message || 'Your account has been reactivated! You can now log in.');
+                setUsername(expiredData.tenant_id);
+                setExpiredData(null);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.error || err.message || 'Failed to activate subscription. Please try again.');
+        } finally {
+            setRenewing(false);
+        }
+    };
+
+    const handleRazorpayPay = async () => {
+        if (!expiredData?.tenant_id) return;
+        setRenewing(true);
+        try {
+            const orderRes = await api.post('/auth/razorpay-create-subscription-order', {
+                tenant_id: expiredData.tenant_id,
+                amount: expiredData.amount,
+                plan: expiredData.next_plan
+            });
+
+            const { order_id, amount, currency, key } = orderRes.data;
+
+            const options = {
+                key: key,
+                amount: amount,
+                currency: currency,
+                name: 'Smart Tailors',
+                description: expiredData.next_plan === 'Yearly' ? 'Annual Subscription (365 Days)' : '1-Month Trial Extension (30 Days)',
+                image: '/logo.png',
+                order_id: order_id,
+                handler: async (response) => {
+                    try {
+                        const verifyRes = await api.post('/auth/razorpay-verify-subscription-payment', {
+                            tenant_id: expiredData.tenant_id,
+                            plan: expiredData.next_plan,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+                        if (verifyRes.data.success) {
+                            toast.success('🎉 Payment Verified via Razorpay!');
+                            setRenewSuccessMsg(verifyRes.data.message || 'Your account is reactivated! You can now log in.');
+                            setUsername(expiredData.tenant_id);
+                            setExpiredData(null);
+                        }
+                    } catch (err) {
+                        toast.error(err.response?.data?.error || 'Payment verification failed');
+                    }
+                },
+                prefill: {
+                    name: expiredData.admin_name || '',
+                    contact: expiredData.phone_number || ''
+                },
+                theme: {
+                    color: '#6A1E2E'
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                toast.error(response.error.description || 'Payment Failed');
+            });
+            rzp.open();
+        } catch (err) {
+            toast.error(err.response?.data?.error || err.message || 'Failed to initialize Razorpay checkout');
+        } finally {
+            setRenewing(false);
+        }
+    };
+
+    const copyUpiId = () => {
+        const upi = expiredData?.upi_id || '9113565802@ibl';
+        navigator.clipboard.writeText(upi);
+        setCopiedUpi(true);
+        toast.success('UPI ID copied to clipboard!');
+        setTimeout(() => setCopiedUpi(false), 2500);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -77,6 +179,8 @@ export default function Login({ setAuth }) {
         { id: 'Password', label: '🔒 Password', sub: 'Admin access' },
         { id: 'Worker', label: '👷 Worker', sub: 'Passwordless' },
     ];
+
+    const upiPayUrl = `upi://pay?pa=9113565802@ibl&pn=Smart%20Tailors&am=${expiredData?.amount || 1}&cu=INR&tn=Renewal-${encodeURIComponent(expiredData?.tenant_id || 'Shop')}`;
 
     return (
         <div style={{
@@ -151,147 +255,306 @@ export default function Login({ setAuth }) {
                 animation: 'slideInRight 0.6s ease both'
             }}>
                 <div style={{ width: '100%', maxWidth: 380 }}>
-                    {/* Header */}
-                    <div style={{ marginBottom: 32, textAlign: 'center' }}>
-                        <h2 style={{ fontFamily: '"Playfair Display", serif', fontSize: 26, color: '#fff', margin: '0 0 6px', fontWeight: 400 }}>
-                            Welcome Back
-                        </h2>
-                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0 }}>
-                            Sign in to your boutique dashboard
-                        </p>
-                    </div>
 
-                    <form onSubmit={handleSubmit}>
-                        {/* Shop Username */}
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                                Shop Username or Phone
-                            </label>
-                            <div className="login-input-wrap">
-                                <User size={16} className="login-input-icon" />
-                                <input
-                                    className="login-input with-icon"
-                                    type="text"
-                                    placeholder="Enter shop username or phone"
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    autoComplete="username"
-                                    required
-                                />
+                    {/* IF TRIAL EXPIRED — SHOW TRIAL EXPIRED RENEWAL PAGE */}
+                    {expiredData ? (
+                        <div style={{ animation: 'fadeUp 0.4s ease both' }}>
+                            {/* Alert Header */}
+                            <div style={{
+                                background: 'rgba(239,83,80,0.12)', border: '1.5px solid rgba(239,83,80,0.3)',
+                                borderRadius: 16, padding: '20px 18px', textAlign: 'center', marginBottom: 20
+                            }}>
+                                <div style={{
+                                    width: 54, height: 54, borderRadius: '50%', background: 'rgba(239,83,80,0.2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px',
+                                    border: '2px solid #ef5350'
+                                }}>
+                                    <AlertTriangle size={28} style={{ color: '#ef5350' }} />
+                                </div>
+                                <h2 style={{ fontFamily: '"Playfair Display", serif', fontSize: 22, color: '#fff', margin: '0 0 6px', fontWeight: 600 }}>
+                                    {expiredData.title || 'Subscription Expired 🔒'}
+                                </h2>
+                                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+                                    {expiredData.error || `Your trial period for ${expiredData.shop_name} has ended.`}
+                                </p>
                             </div>
-                        </div>
 
-                        {/* Auth mode tabs */}
-                        <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'rgba(255,255,255,0.05)', padding: 5, borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
-                            {modes.map(m => (
-                                <button
-                                    key={m.id}
-                                    type="button"
-                                    className={`auth-mode-btn ${authMode === m.id ? 'active' : 'inactive'}`}
-                                    onClick={() => { setAuthMode(m.id); setOtpSent(false); }}
+                            {/* Details Box */}
+                            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '16px', marginBottom: 20 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
+                                    <span>Boutique Admin:</span>
+                                    <strong style={{ color: '#fff' }}>{expiredData.admin_name}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
+                                    <span>Shop ID / Username:</span>
+                                    <strong style={{ color: '#d4af37', fontFamily: 'monospace' }}>{expiredData.tenant_id}</strong>
+                                </div>
+                                <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                                    <span style={{ color: '#fff', fontWeight: 600 }}>
+                                        {expiredData.next_plan === 'Yearly' ? 'Annual Renewal Fee:' : 'Extension Fee:'}
+                                    </span>
+                                    <span style={{ background: 'linear-gradient(135deg, #d4af37, #f5e17c)', color: '#2a0709', padding: '4px 12px', borderRadius: 20, fontWeight: 800, fontSize: 15 }}>
+                                        ₹{expiredData.amount} / {expiredData.next_plan === 'Yearly' ? '365 Days' : '30 Days'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* UPI QR Code Section */}
+                            <div style={{
+                                background: 'rgba(212,175,55,0.08)', border: '1.5px solid rgba(212,175,55,0.25)',
+                                borderRadius: 16, padding: '20px 16px', textAlign: 'center', marginBottom: 20
+                            }}>
+                                <div style={{ fontSize: 13, color: '#d4af37', fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    <QrCode size={16} /> Scan QR Code to Pay ₹{expiredData.amount}
+                                </div>
+                                <div style={{ display: 'inline-block', background: '#fff', padding: 12, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', marginBottom: 12 }}>
+                                    <QRCode value={upiPayUrl} size={150} />
+                                </div>
+                                <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.6)', margin: '0 0 12px' }}>
+                                    Scan with GPay, PhonePe, Paytm, BHIM, or any UPI App
+                                </p>
+
+                                {/* Direct Mobile UPI Link Button */}
+                                <a
+                                    href={upiPayUrl}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                        width: '100%', padding: '12px', background: 'linear-gradient(135deg, #2e7d32, #4caf50)',
+                                        color: '#fff', textDecoration: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14,
+                                        boxShadow: '0 4px 14px rgba(76,175,80,0.3)', marginBottom: 10, boxSizing: 'border-box'
+                                    }}
                                 >
-                                    <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
-                                    <span style={{ fontSize: 10, opacity: 0.7 }}>{m.sub}</span>
-                                </button>
-                            ))}
-                        </div>
+                                    <CreditCard size={17} /> Direct Pay ₹{expiredData.amount} via UPI App
+                                </a>
 
-                        {/* Password mode */}
-                        {authMode === 'Password' && (
-                            <div style={{ marginBottom: 24, animation: 'fadeUp 0.25s ease both' }}>
-                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                                    Password
-                                </label>
-                                <div className="login-input-wrap">
-                                    <Lock size={16} className="login-input-icon" />
-                                    <input
-                                        className="login-input with-icon"
-                                        type={showPassword ? 'text' : 'password'}
-                                        placeholder="Enter your password"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        autoComplete="current-password"
-                                        style={{ paddingRight: 44 }}
-                                        required
-                                    />
+                                {/* Razorpay Payment Button */}
+                                <button
+                                    type="button"
+                                    onClick={handleRazorpayPay}
+                                    disabled={renewing}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                        width: '100%', padding: '12px', background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                                        color: '#fff', border: 'none', cursor: 'pointer', borderRadius: 10, fontWeight: 700, fontSize: 14,
+                                        boxShadow: '0 4px 14px rgba(2,132,199,0.3)', marginBottom: 12, boxSizing: 'border-box'
+                                    }}
+                                >
+                                    <Sparkles size={16} /> Pay ₹{expiredData.amount} via Razorpay (Card / Netbanking / UPI)
+                                </button>
+
+                                {/* UPI ID display with Copy Button */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                    background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>UPI ID:</span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>9113565802@ibl</span>
                                     <button
                                         type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                        onClick={copyUpiId}
+                                        style={{ background: 'none', border: 'none', color: '#d4af37', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+                                        title="Copy UPI ID"
                                     >
-                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {copiedUpi ? <CheckCircle size={15} style={{ color: '#4caf50' }} /> : <Copy size={15} />}
                                     </button>
                                 </div>
                             </div>
-                        )}
 
-
-
-                        {/* Worker mode */}
-                        {authMode === 'Worker' && (
-                            <div style={{ marginBottom: 24, animation: 'fadeUp 0.25s ease both' }}>
-                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                                    Select Worker
-                                </label>
-                                {loadingWorkers ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-                                        <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.15)', borderTop: '2px solid #d4af37', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-                                        Fetching workers...
-                                    </div>
-                                ) : workersList.length > 0 ? (
-                                    <div className="login-input-wrap">
-                                        <User size={16} className="login-input-icon" />
-                                        <select
-                                            value={selectedWorker}
-                                            onChange={e => setSelectedWorker(e.target.value)}
-                                            className="login-input with-icon"
-                                            style={{ appearance: 'none', cursor: 'pointer' }}
-                                            required
-                                        >
-                                            {workersList.map(w => <option key={w.id} value={w.name} style={{ background: '#2a0709' }}>{w.name}</option>)}
-                                        </select>
-                                    </div>
+                            {/* Activation Action Button */}
+                            <button
+                                type="button"
+                                className="login-btn-primary"
+                                onClick={handleRenewSubscription}
+                                disabled={renewing}
+                                style={{ marginBottom: 12 }}
+                            >
+                                {renewing ? (
+                                    <>
+                                        <span style={{ width: 16, height: 16, border: '2px solid rgba(42,7,9,0.3)', borderTop: '2px solid #2a0709', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                                        Activating Subscription...
+                                    </>
                                 ) : (
-                                    <div style={{ padding: '14px 16px', background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)', borderRadius: 12, color: '#ffc107', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
-                                        ⚠️ No workers registered for this shop yet.<br/>
-                                        <span style={{ fontSize: 11, opacity: 0.7 }}>Ask the shop admin to add workers in Boutique Settings.</span>
-                                    </div>
+                                    <>
+                                        <CheckCircle size={18} /> I Have Paid ₹{expiredData.amount} — Activate Now
+                                    </>
                                 )}
-                                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8, margin: '8px 0 0' }}>
-                                    {username.trim() && workersList.length === 0 && !loadingWorkers
-                                        ? 'No workers have been added to this shop yet.'
-                                        : 'Select your name to enter the dashboard without a password.'}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setExpiredData(null)}
+                                style={{
+                                    width: '100%', padding: '10px', background: 'transparent',
+                                    border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)',
+                                    borderRadius: 10, fontSize: 13, cursor: 'pointer'
+                                }}
+                            >
+                                ← Back to Login
+                            </button>
+                        </div>
+                    ) : (
+                        /* NORMAL LOGIN FORM */
+                        <>
+                            {/* Header */}
+                            <div style={{ marginBottom: 32, textAlign: 'center' }}>
+                                <h2 style={{ fontFamily: '"Playfair Display", serif', fontSize: 26, color: '#fff', margin: '0 0 6px', fontWeight: 400 }}>
+                                    Welcome Back
+                                </h2>
+                                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0 }}>
+                                    Sign in to your boutique dashboard
                                 </p>
                             </div>
-                        )}
 
-                        {/* Submit button */}
-                        {authMode === 'Worker' ? (
-                            <button type="submit" className="login-btn-primary" disabled={loading || !selectedWorker}>
-                                <LogIn size={17} />
-                                {loading ? 'Logging in...' : 'Enter Worker Dashboard'}
-                                {!loading && <ChevronRight size={16} />}
-                            </button>
-                        ) : (
-                            <button type="submit" className="login-btn-primary" disabled={loading}>
-                                <LogIn size={17} />
-                                {loading ? 'Signing in...' : 'Sign in to Dashboard'}
-                                {!loading && <ChevronRight size={16} />}
-                            </button>
-                        )}
+                            {/* Renewal Success Notification */}
+                            {renewSuccessMsg && (
+                                <div style={{
+                                    background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)',
+                                    borderRadius: 12, padding: '14px', marginBottom: 20, textAlign: 'left',
+                                    animation: 'fadeUp 0.3s ease both'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                        <CheckCircle size={18} style={{ color: '#4caf50', flexShrink: 0, marginTop: 2 }} />
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, color: '#4caf50', marginBottom: 2 }}>Subscription Active! 🎉</div>
+                                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{renewSuccessMsg}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-                        {/* Register link */}
-                        <div style={{ textAlign: 'center', marginTop: 28 }}>
-                            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>New boutique? </span>
-                            <Link to="/register" style={{ color: '#d4af37', textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'opacity 0.2s' }}>
-                                Register your shop →
-                            </Link>
-                        </div>
+                            <form onSubmit={handleSubmit}>
+                                {/* Shop Username */}
+                                <div style={{ marginBottom: 16 }}>
+                                    <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                                        Shop Username or Phone
+                                    </label>
+                                    <div className="login-input-wrap">
+                                        <User size={16} className="login-input-icon" />
+                                        <input
+                                            className="login-input with-icon"
+                                            type="text"
+                                            placeholder="Enter shop username or phone"
+                                            value={username}
+                                            onChange={e => setUsername(e.target.value)}
+                                            autoComplete="username"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 24, margin: '24px 0 0' }}>
-                            Smart Tailor v1.2 · Boutique Management Platform
-                        </p>
-                    </form>
+                                {/* Auth mode tabs */}
+                                <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'rgba(255,255,255,0.05)', padding: 5, borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    {modes.map(m => (
+                                        <button
+                                            key={m.id}
+                                            type="button"
+                                            className={`auth-mode-btn ${authMode === m.id ? 'active' : 'inactive'}`}
+                                            onClick={() => setAuthMode(m.id)}
+                                        >
+                                            <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
+                                            <span style={{ fontSize: 10, opacity: 0.7 }}>{m.sub}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Password mode */}
+                                {authMode === 'Password' && (
+                                    <div style={{ marginBottom: 24, animation: 'fadeUp 0.25s ease both' }}>
+                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                                            Password
+                                        </label>
+                                        <div className="login-input-wrap">
+                                            <Lock size={16} className="login-input-icon" />
+                                            <input
+                                                className="login-input with-icon"
+                                                type={showPassword ? 'text' : 'password'}
+                                                placeholder="Enter your password"
+                                                value={password}
+                                                onChange={e => setPassword(e.target.value)}
+                                                autoComplete="current-password"
+                                                style={{ paddingRight: 44 }}
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex', alignItems: 'center' }}
+                                            >
+                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Worker mode */}
+                                {authMode === 'Worker' && (
+                                    <div style={{ marginBottom: 24, animation: 'fadeUp 0.25s ease both' }}>
+                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                                            Select Worker
+                                        </label>
+                                        {loadingWorkers ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                                                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.15)', borderTop: '2px solid #d4af37', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                                                Fetching workers...
+                                            </div>
+                                        ) : workersList.length > 0 ? (
+                                            <div className="login-input-wrap">
+                                                <User size={16} className="login-input-icon" />
+                                                <select
+                                                    value={selectedWorker}
+                                                    onChange={e => setSelectedWorker(e.target.value)}
+                                                    className="login-input with-icon"
+                                                    style={{ appearance: 'none', cursor: 'pointer' }}
+                                                    required
+                                                >
+                                                    {workersList.map(w => <option key={w.id} value={w.name} style={{ background: '#2a0709' }}>{w.name}</option>)}
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: '14px 16px', background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)', borderRadius: 12, color: '#ffc107', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
+                                                ⚠️ No workers registered for this shop yet.<br/>
+                                                <span style={{ fontSize: 11, opacity: 0.7 }}>Ask the shop admin to add workers in Boutique Settings.</span>
+                                            </div>
+                                        )}
+                                        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8, margin: '8px 0 0' }}>
+                                            {username.trim() && workersList.length === 0 && !loadingWorkers
+                                                ? 'No workers have been added to this shop yet.'
+                                                : 'Select your name to enter the dashboard without a password.'}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Submit button */}
+                                {authMode === 'Worker' ? (
+                                    <button type="submit" className="login-btn-primary" disabled={loading || !selectedWorker}>
+                                        <LogIn size={17} />
+                                        {loading ? 'Logging in...' : 'Enter Worker Dashboard'}
+                                        {!loading && <ChevronRight size={16} />}
+                                    </button>
+                                ) : (
+                                    <button type="submit" className="login-btn-primary" disabled={loading}>
+                                        <LogIn size={17} />
+                                        {loading ? 'Signing in...' : 'Sign in to Dashboard'}
+                                        {!loading && <ChevronRight size={16} />}
+                                    </button>
+                                )}
+
+                                {/* Register link */}
+                                <div style={{ textAlign: 'center', marginTop: 28 }}>
+                                    <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>New boutique? </span>
+                                    <Link to="/register" style={{ color: '#d4af37', textDecoration: 'none', fontWeight: 700, fontSize: 13, transition: 'opacity 0.2s' }}>
+                                        Register your shop →
+                                    </Link>
+                                </div>
+
+                                <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 24, margin: '24px 0 0' }}>
+                                    Smart Tailor v1.2 · Boutique Management Platform
+                                </p>
+                            </form>
+                        </>
+                    )}
+
                 </div>
             </div>
         </div>

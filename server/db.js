@@ -253,6 +253,10 @@ async function initDB() {
       await db.execute("ALTER TABLE tenants ADD COLUMN pending_request_date TEXT");
       console.log('✅ Added pending_request_date column to tenants table');
     } catch (e) {}
+    try {
+      await db.execute("ALTER TABLE tenants ADD COLUMN subscription_expires_at TEXT");
+      console.log('✅ Added subscription_expires_at column to tenants table');
+    } catch (e) {}
 
     // Seed default tenant (disabled to prevent it from automatically reappearing)
     // try {
@@ -595,25 +599,21 @@ async function checkPremiumStatus(tenantId) {
   if (!tenantId) return false;
   try {
     const rs = await db.execute({
-      sql: 'SELECT subscription_type, created_at FROM tenants WHERE tenant_id = ? LIMIT 1',
+      sql: 'SELECT subscription_type, created_at, subscription_expires_at FROM tenants WHERE tenant_id = ? LIMIT 1',
       args: [tenantId]
     });
     if (rs.rows.length === 0) return false;
     const tenant = rs.rows[0];
 
-    // If subscription is Monthly or Yearly, premium is active
-    if (['Monthly', 'Yearly'].includes(tenant.subscription_type)) {
-      return true;
+    const now = new Date();
+    if (tenant.subscription_expires_at) {
+      return new Date(tenant.subscription_expires_at) > now;
     }
 
-    // Trial: If new user (within 30 days of registration), they get premium access
+    // Fallback logic for legacy accounts without explicit subscription_expires_at
     const createdAt = new Date(tenant.created_at || Date.now());
-    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-    if (new Date() - createdAt <= thirtyDaysInMs) {
-      return true;
-    }
-
-    return false;
+    const days = tenant.subscription_type === 'Yearly' ? 365 : 30;
+    return (now - createdAt) <= (days * 24 * 60 * 60 * 1000);
   } catch (err) {
     console.error('❌ checkPremiumStatus Error:', err.message);
     return false;
