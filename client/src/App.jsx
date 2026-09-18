@@ -72,13 +72,15 @@ export default function App() {
             ...auth, 
             isPremiumActive: res.data.isPremiumActive, 
             subscription_type: res.data.subscription_type,
-            created_at: res.data.created_at || auth.created_at
+            created_at: res.data.created_at || auth.created_at,
+            subscription_expires_at: res.data.subscription_expires_at || auth.subscription_expires_at
           };
           // Only update state and localstorage if something changed to avoid infinite renders
           const changed =
             auth.isPremiumActive !== updated.isPremiumActive ||
             auth.subscription_type !== updated.subscription_type ||
-            auth.created_at !== updated.created_at;
+            auth.created_at !== updated.created_at ||
+            auth.subscription_expires_at !== updated.subscription_expires_at;
           if (changed) {
             localStorage.setItem('tailor_auth', JSON.stringify(updated));
             setAuth(updated);

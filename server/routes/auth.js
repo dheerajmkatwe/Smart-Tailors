@@ -198,7 +198,8 @@ router.post('/login', async (req, res) => {
             shop_logo: tenant.shop_logo || '',
             isPremiumActive: isPremium,
             subscription_type: tenant.subscription_type || 'Free',
-            created_at: tenant.created_at || null
+            created_at: tenant.created_at || null,
+            subscription_expires_at: tenant.subscription_expires_at || null
         });
     } catch (err) {
         console.error('Login error:', err.message);
@@ -252,7 +253,7 @@ router.get('/premium-status', async (req, res) => {
     try {
         const isPremium = await checkPremiumStatus(req.tenantId);
         const rs = await db.execute({
-            sql: 'SELECT subscription_type, created_at FROM tenants WHERE tenant_id = ? LIMIT 1',
+            sql: 'SELECT subscription_type, created_at, subscription_expires_at FROM tenants WHERE tenant_id = ? LIMIT 1',
             args: [req.tenantId]
         });
         if (rs.rows.length === 0) {
@@ -262,7 +263,8 @@ router.get('/premium-status', async (req, res) => {
         res.json({
             isPremiumActive: isPremium,
             subscription_type: tenant.subscription_type || 'Free',
-            created_at: tenant.created_at || new Date().toISOString()
+            created_at: tenant.created_at || new Date().toISOString(),
+            subscription_expires_at: tenant.subscription_expires_at || null
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -11,45 +11,55 @@ import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
 
 /* ─── Free Trial Countdown Banner ─────────────────────────────────────── */
-const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // exactly 30 days
+const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-function getTimeLeft(createdAt) {
-    if (!createdAt) return null;
-    const start = new Date(createdAt).getTime();
-    const end   = start + TRIAL_DURATION_MS;
-    const diff  = end - Date.now();
+function getTimeLeftFromExpiry(expiresAt) {
+    if (!expiresAt) return null;
+    const end  = new Date(expiresAt).getTime();
+    const diff = end - Date.now();
     if (diff <= 0) return null;
     const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    const totalDays = TRIAL_DURATION_MS / (1000 * 60 * 60 * 24);
-    const pct = Math.max(0, Math.min(100, (diff / TRIAL_DURATION_MS) * 100));
+    const pct     = Math.max(0, Math.min(100, (diff / TRIAL_DURATION_MS) * 100));
     return { days, hours, minutes, seconds, pct };
 }
 
-function FreeTrialBanner({ createdAt }) {
-    const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(createdAt));
+function resolveExpiresAt(auth) {
+    // Primary: subscription_expires_at field
+    if (auth?.subscription_expires_at) return auth.subscription_expires_at;
+    // Fallback: created_at + 30 days
+    if (auth?.created_at) {
+        return new Date(new Date(auth.created_at).getTime() + TRIAL_DURATION_MS).toISOString();
+    }
+    return null;
+}
+
+function FreeTrialBanner({ auth }) {
+    const expiresAt = resolveExpiresAt(auth);
+    const [timeLeft, setTimeLeft] = useState(() => getTimeLeftFromExpiry(expiresAt));
 
     useEffect(() => {
-        if (!createdAt) return;
+        if (!expiresAt) return;
+        setTimeLeft(getTimeLeftFromExpiry(expiresAt)); // recalc immediately if auth changed
         const id = setInterval(() => {
-            setTimeLeft(getTimeLeft(createdAt));
+            setTimeLeft(getTimeLeftFromExpiry(expiresAt));
         }, 1000);
         return () => clearInterval(id);
-    }, [createdAt]);
+    }, [expiresAt]);
 
-    if (!timeLeft) return null; // trial ended
+    // Only show during Free trial and while time remains
+    const isFree = !auth?.subscription_type || auth.subscription_type === 'Free';
+    if (!isFree || !timeLeft) return null;
 
-    const urgency = timeLeft.days < 3; // turn deeply red in last 3 days
+    const urgency = timeLeft.days < 3;
 
     return (
         <div className="free-trial-banner" data-urgent={urgency}>
-            {/* Animated shimmer strip */}
             <div className="ftb-shimmer" />
 
             <div className="ftb-left">
-                {/* Blinking live red dot */}
                 <span className="ftb-live-dot" />
                 <Timer size={15} style={{ opacity: 0.9 }} />
                 <span className="ftb-title">Free Trial</span>
@@ -77,7 +87,6 @@ function FreeTrialBanner({ createdAt }) {
                         <span className="ftb-label">sec</span>
                     </span>
                 </div>
-                {/* Progress bar */}
                 <div className="ftb-progress-track">
                     <div className="ftb-progress-fill" style={{ width: `${timeLeft.pct}%` }} />
                 </div>
@@ -297,7 +306,7 @@ export default function Dashboard({ onMenuClick, auth }) {
 
             <div className="page-container">
                 {/* Free Trial Banner */}
-                <FreeTrialBanner createdAt={auth?.created_at} />
+                <FreeTrialBanner auth={auth} />
                 {/* Overdue alert banner */}
                 {data?.overdueCount > 0 && (
                     <div className="alert alert-warning flex gap-8 mb-16" onClick={() => handleKpiCardClick('overdue')} style={{ cursor: 'pointer' }}>
