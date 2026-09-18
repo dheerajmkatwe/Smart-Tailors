@@ -1,6 +1,43 @@
 const express = require('express');
 const router = express.Router();
+const Razorpay = require('razorpay');
 const { db, checkPremiumStatus, getActiveBranchId } = require('../db');
+
+// Helper to initialize Razorpay SDK client dynamically for tenant or fallback
+async function getRazorpayClient(tenantId = null) {
+    let keyId = process.env.RAZORPAY_KEY_ID;
+    let keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (tenantId) {
+        try {
+            const rs = await db.execute({
+                sql: 'SELECT razorpay_key_id, razorpay_key_secret FROM tenants WHERE tenant_id = ? LIMIT 1',
+                args: [tenantId]
+            });
+            if (rs.rows.length > 0) {
+                if (rs.rows[0].razorpay_key_id) keyId = rs.rows[0].razorpay_key_id;
+                if (rs.rows[0].razorpay_key_secret) keySecret = rs.rows[0].razorpay_key_secret;
+            }
+        } catch (e) {
+            console.error('Error fetching tenant razorpay keys:', e);
+        }
+    }
+
+    keyId = keyId || 'rzp_test_5dd75929b23048';
+
+    if (keyId && keySecret) {
+        try {
+            return {
+                rzp: new Razorpay({ key_id: keyId, key_secret: keySecret }),
+                keyId,
+                keySecret
+            };
+        } catch (err) {
+            console.error('Razorpay initialization error:', err);
+        }
+    }
+    return { rzp: null, keyId, keySecret: keySecret || '' };
+}
 
 
 // Helper to generate a URL-friendly slug
@@ -947,17 +984,29 @@ router.post('/razorpay-create-order', async (req, res) => {
         const amount = plan === 'monthly' ? 25000 : 200000;
         const currency = 'INR';
 
-        // Generate authentic dynamic order ID
-        const orderId = 'order_' + require('crypto').randomBytes(8).toString('hex');
-        
+        const { rzp, keyId } = await getRazorpayClient(req.tenantId);
+        let orderId;
+
+        if (rzp) {
+            const order = await rzp.orders.create({
+                amount: amount,
+                currency: currency,
+                receipt: `rcpt_sub_${Date.now()}`
+            });
+            orderId = order.id;
+        } else {
+            orderId = 'order_' + require('crypto').randomBytes(8).toString('hex');
+        }
+
         res.json({
             success: true,
             order_id: orderId,
             amount: amount,
             currency: currency,
-            key: process.env.RAZORPAY_KEY_ID || 'rzp_test_5dd75929b23048'
+            key: keyId
         });
     } catch (err) {
+        console.error('Razorpay create order error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -967,27 +1016,38 @@ router.post('/razorpay-create-order', async (req, res) => {
 router.post('/razorpay-verify-payment', async (req, res) => {
     try {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature, plan } = req.body;
-        
-        // In a live system with verified production credentials, we verify signature:
-        // const crypto = require('crypto');
-        // const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
-        //                                  .update(razorpay_order_id + '|' + razorpay_payment_id)
-        //                                  .digest('hex');
-        
+        const { keySecret } = await getRazorpayClient(req.tenantId);
+
+        if (keySecret && razorpay_order_id && razorpay_signature) {
+            const crypto = require('crypto');
+            const expectedSignature = crypto
+                .createHmac('sha256', keySecret)
+                .update(razorpay_order_id + '|' + razorpay_payment_id)
+                .digest('hex');
+
+            if (expectedSignature !== razorpay_signature) {
+                return res.status(400).json({ error: 'Invalid payment signature. Transaction verification failed.' });
+            }
+        }
+
         const subscriptionType = plan === 'yearly' ? 'Yearly' : 'Monthly';
-        
-        // Update database with premium tier activation
+        const durationModifier = plan === 'yearly' ? '+365 days' : '+30 days';
+
         await db.execute({
-            sql: 'UPDATE tenants SET subscription_type = ? WHERE tenant_id = ?',
+            sql: `UPDATE tenants 
+                  SET subscription_type = ?,
+                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime')
+                  WHERE tenant_id = ?`,
             args: [subscriptionType, req.tenantId]
         });
-        
+
         res.json({
             success: true,
             subscription_type: subscriptionType,
             message: 'Payment verified and Premium Activated automatically via Razorpay!'
         });
     } catch (err) {
+        console.error('Razorpay verify payment error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1003,16 +1063,20 @@ router.post('/razorpay-create-advance-order', async (req, res) => {
         const amountPaise = Math.round(amount * 100);
         const currency = 'INR';
 
-        // Load the boutique's custom Razorpay key if they have one configured in their settings
-        const rs = await db.execute({
-            sql: 'SELECT razorpay_key_id FROM tenants WHERE tenant_id = ?',
-            args: [req.tenantId]
-        });
-        const keyId = (rs.rows[0]?.razorpay_key_id) || process.env.RAZORPAY_KEY_ID || 'rzp_test_5dd75929b23048';
+        const { rzp, keyId } = await getRazorpayClient(req.tenantId);
+        let orderId;
 
-        // Generate authentic dynamic order ID
-        const orderId = 'order_adv_' + require('crypto').randomBytes(8).toString('hex');
-        
+        if (rzp) {
+            const order = await rzp.orders.create({
+                amount: amountPaise,
+                currency: currency,
+                receipt: `rcpt_adv_${Date.now()}`
+            });
+            orderId = order.id;
+        } else {
+            orderId = 'order_adv_' + require('crypto').randomBytes(8).toString('hex');
+        }
+
         res.json({
             success: true,
             order_id: orderId,
@@ -1021,6 +1085,7 @@ router.post('/razorpay-create-advance-order', async (req, res) => {
             key: keyId
         });
     } catch (err) {
+        console.error('Razorpay create advance order error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1030,33 +1095,27 @@ router.post('/razorpay-create-advance-order', async (req, res) => {
 router.post('/razorpay-verify-advance-payment', async (req, res) => {
     try {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-        
-        // Load the boutique's custom Razorpay key & secret
-        const rs = await db.execute({
-            sql: 'SELECT razorpay_key_id, razorpay_key_secret FROM tenants WHERE tenant_id = ?',
-            args: [req.tenantId]
-        });
-        const keySecret = (rs.rows[0]?.razorpay_key_secret) || process.env.RAZORPAY_KEY_SECRET || '';
+        const { keySecret } = await getRazorpayClient(req.tenantId);
 
-        // If they have set up their actual custom key secret, perform genuine cryptographic signature verification!
-        if (keySecret) {
+        if (keySecret && razorpay_order_id && razorpay_signature) {
             const crypto = require('crypto');
             const expectedSignature = crypto
                 .createHmac('sha256', keySecret)
                 .update(razorpay_order_id + '|' + razorpay_payment_id)
                 .digest('hex');
-            
+
             if (expectedSignature !== razorpay_signature) {
                 return res.status(400).json({ error: 'Invalid payment signature. Transaction verification failed.' });
             }
         }
-        
+
         res.json({
             success: true,
             message: 'Advance payment verified successfully via Razorpay!',
             payment_id: razorpay_payment_id
         });
     } catch (err) {
+        console.error('Razorpay verify advance error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1131,12 +1190,19 @@ router.post('/razorpay-create-subscription-order', async (req, res) => {
         const amountPaise = Math.round(parseFloat(amount) * 100);
         const currency = 'INR';
 
-        const tenantRs = await db.execute({
-            sql: 'SELECT razorpay_key_id FROM tenants WHERE tenant_id = ? LIMIT 1',
-            args: [tenant_id]
-        });
-        const keyId = (tenantRs.rows[0]?.razorpay_key_id) || process.env.RAZORPAY_KEY_ID;
-        const orderId = 'order_sub_' + require('crypto').randomBytes(8).toString('hex');
+        const { rzp, keyId } = await getRazorpayClient(tenant_id);
+        let orderId;
+
+        if (rzp) {
+            const order = await rzp.orders.create({
+                amount: amountPaise,
+                currency: currency,
+                receipt: `rcpt_renew_${Date.now()}`
+            });
+            orderId = order.id;
+        } else {
+            orderId = 'order_sub_' + require('crypto').randomBytes(8).toString('hex');
+        }
 
         res.json({
             success: true,
@@ -1146,6 +1212,7 @@ router.post('/razorpay-create-subscription-order', async (req, res) => {
             key: keyId
         });
     } catch (err) {
+        console.error('Razorpay create subscription order error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1159,11 +1226,7 @@ router.post('/razorpay-verify-subscription-payment', async (req, res) => {
             return res.status(400).json({ error: 'Shop ID is required' });
         }
 
-        const tenantRs = await db.execute({
-            sql: 'SELECT razorpay_key_secret FROM tenants WHERE tenant_id = ? LIMIT 1',
-            args: [tenant_id]
-        });
-        const keySecret = (tenantRs.rows[0]?.razorpay_key_secret) || process.env.RAZORPAY_KEY_SECRET;
+        const { keySecret } = await getRazorpayClient(tenant_id);
 
         if (keySecret && razorpay_order_id && razorpay_signature) {
             const crypto = require('crypto');
