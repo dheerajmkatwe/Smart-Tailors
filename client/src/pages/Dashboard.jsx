@@ -26,11 +26,17 @@ function getTimeLeftFromExpiry(expiresAt) {
 }
 
 function resolveExpiresAt(auth) {
-    if (auth?.subscription_expires_at) return auth.subscription_expires_at;
-    if (auth?.created_at) {
-        return new Date(new Date(auth.created_at).getTime() + TRIAL_DURATION_MS).toISOString();
+    const now = Date.now();
+    const fallback = new Date(now + TRIAL_DURATION_MS).toISOString();
+    if (auth?.subscription_expires_at) {
+        const t = new Date(auth.subscription_expires_at).getTime();
+        return t > now ? auth.subscription_expires_at : fallback;
     }
-    return null;
+    if (auth?.created_at) {
+        const t = new Date(auth.created_at).getTime() + TRIAL_DURATION_MS;
+        return t > now ? new Date(t).toISOString() : fallback;
+    }
+    return fallback;
 }
 
 function TrialPill({ auth }) {

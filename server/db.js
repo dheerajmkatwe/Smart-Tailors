@@ -258,6 +258,20 @@ async function initDB() {
       console.log('✅ Added subscription_expires_at column to tenants table');
     } catch (e) {}
 
+    // Backfill subscription_expires_at for Free tenants where it is NULL
+    // (i.e. tenants registered before this column was added to the INSERT)
+    try {
+      await db.execute(`
+        UPDATE tenants
+        SET subscription_expires_at = datetime(created_at, '+30 days')
+        WHERE subscription_type = 'Free'
+          AND (subscription_expires_at IS NULL OR subscription_expires_at = '')
+      `);
+      console.log('✅ Backfilled subscription_expires_at for existing Free tenants');
+    } catch (e) {
+      console.error('❌ Failed backfilling subscription_expires_at:', e.message);
+    }
+
     // Seed default tenant (disabled to prevent it from automatically reappearing)
     // try {
     //   await db.execute(`
