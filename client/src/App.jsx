@@ -162,7 +162,7 @@ export default function App() {
 
               <main className="main-content">
                 <Routes>
-                  <Route path="/" element={isAdmin ? <Dashboard onMenuClick={toggleSidebar} /> : <WorkerDashboard onMenuClick={toggleSidebar} auth={auth} />} />
+                  <Route path="/" element={isAdmin ? <Dashboard onMenuClick={toggleSidebar} auth={auth} /> : <WorkerDashboard onMenuClick={toggleSidebar} auth={auth} />} />
                   <Route path="/new-order" element={<NewOrder onMenuClick={toggleSidebar} auth={auth} />} />
                   <Route path="/customer/:id" element={<CustomerSearch onMenuClick={toggleSidebar} auth={auth} />} />
 

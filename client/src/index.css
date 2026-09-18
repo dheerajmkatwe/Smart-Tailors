@@ -1659,3 +1659,189 @@ tfoot tr td {
   .card-body { padding: 10px 8px; }
   .topbar-title { font-size: 14px; }
 }
+
+/* ── Free Trial Countdown Banner ─────────────────────────────────────────── */
+@keyframes ftb-blink {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+  50%       { opacity: 0.6; transform: scale(0.85); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+}
+@keyframes ftb-pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  70%  { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes ftb-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+@keyframes ftb-slide-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.free-trial-banner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #1a0a10 0%, #2d0d1a 50%, #1a0a10 100%);
+  border: 1.5px solid rgba(220, 38, 38, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.15), 0 2px 8px rgba(0,0,0,0.2);
+  animation: ftb-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Urgency mode — last 3 days */
+.free-trial-banner[data-urgent="true"] {
+  border-color: rgba(220, 38, 38, 0.65);
+  box-shadow: 0 4px 24px rgba(220, 38, 38, 0.3), 0 0 0 1px rgba(220, 38, 38, 0.15);
+  background: linear-gradient(135deg, #2a0808 0%, #450d0d 50%, #2a0808 100%);
+}
+
+/* Shimmer streak */
+.ftb-shimmer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: ftb-shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Left section: live dot + label */
+.ftb-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: #f87171;
+}
+
+/* Blinking live red dot with ripple ring */
+.ftb-live-dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: ftb-blink 1.2s ease-in-out infinite;
+}
+.ftb-live-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: ftb-pulse-ring 1.4s ease-out infinite;
+}
+
+.ftb-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f87171;
+  white-space: nowrap;
+}
+
+/* Center: countdown + progress */
+.ftb-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.ftb-countdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ftb-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.ftb-num {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: #fca5a5;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  min-width: 32px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ftb-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: rgba(252, 165, 165, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.ftb-sep {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(220, 38, 38, 0.5);
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.ftb-progress-track {
+  width: 100%;
+  max-width: 260px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.ftb-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  transition: width 1s linear;
+}
+
+/* Right: compact day label */
+.ftb-right {
+  flex-shrink: 0;
+}
+
+.ftb-remaining {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(252, 165, 165, 0.7);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .free-trial-banner {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .ftb-num { font-size: 17px; min-width: 24px; }
+  .ftb-right { width: 100%; text-align: center; }
+  .ftb-progress-track { max-width: 100%; }
+}

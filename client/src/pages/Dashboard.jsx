@@ -1,14 +1,98 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Package, Clock, CheckCircle, DollarSign,
     Users, ShoppingBag, AlertTriangle, TrendingUp,
-    Eye, Plus, PlusCircle, ClipboardList, Menu, ArrowRight
+    Eye, Plus, PlusCircle, ClipboardList, Menu, ArrowRight, Timer
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
+
+/* ─── Free Trial Countdown Banner ─────────────────────────────────────── */
+const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // exactly 30 days
+
+function getTimeLeft(createdAt) {
+    if (!createdAt) return null;
+    const start = new Date(createdAt).getTime();
+    const end   = start + TRIAL_DURATION_MS;
+    const diff  = end - Date.now();
+    if (diff <= 0) return null;
+    const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    const totalDays = TRIAL_DURATION_MS / (1000 * 60 * 60 * 24);
+    const pct = Math.max(0, Math.min(100, (diff / TRIAL_DURATION_MS) * 100));
+    return { days, hours, minutes, seconds, pct };
+}
+
+function FreeTrialBanner({ createdAt }) {
+    const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(createdAt));
+
+    useEffect(() => {
+        if (!createdAt) return;
+        const id = setInterval(() => {
+            setTimeLeft(getTimeLeft(createdAt));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [createdAt]);
+
+    if (!timeLeft) return null; // trial ended
+
+    const urgency = timeLeft.days < 3; // turn deeply red in last 3 days
+
+    return (
+        <div className="free-trial-banner" data-urgent={urgency}>
+            {/* Animated shimmer strip */}
+            <div className="ftb-shimmer" />
+
+            <div className="ftb-left">
+                {/* Blinking live red dot */}
+                <span className="ftb-live-dot" />
+                <Timer size={15} style={{ opacity: 0.9 }} />
+                <span className="ftb-title">Free Trial</span>
+            </div>
+
+            <div className="ftb-center">
+                <div className="ftb-countdown">
+                    <span className="ftb-unit">
+                        <span className="ftb-num">{String(timeLeft.days).padStart(2, '0')}</span>
+                        <span className="ftb-label">days</span>
+                    </span>
+                    <span className="ftb-sep">:</span>
+                    <span className="ftb-unit">
+                        <span className="ftb-num">{String(timeLeft.hours).padStart(2, '0')}</span>
+                        <span className="ftb-label">hrs</span>
+                    </span>
+                    <span className="ftb-sep">:</span>
+                    <span className="ftb-unit">
+                        <span className="ftb-num">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                        <span className="ftb-label">min</span>
+                    </span>
+                    <span className="ftb-sep">:</span>
+                    <span className="ftb-unit">
+                        <span className="ftb-num">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                        <span className="ftb-label">sec</span>
+                    </span>
+                </div>
+                {/* Progress bar */}
+                <div className="ftb-progress-track">
+                    <div className="ftb-progress-fill" style={{ width: `${timeLeft.pct}%` }} />
+                </div>
+            </div>
+
+            <div className="ftb-right">
+                <span className="ftb-remaining">
+                    {timeLeft.days > 0
+                        ? `${timeLeft.days}d left`
+                        : `${timeLeft.hours}h ${timeLeft.minutes}m left`}
+                </span>
+            </div>
+        </div>
+    );
+}
 
 function EnhancedStatCard({ value, label, icon: Icon, colorTheme, active, onClick }) {
     const themes = {
@@ -113,7 +197,7 @@ function formatDate(d) {
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function Dashboard({ onMenuClick }) {
+export default function Dashboard({ onMenuClick, auth }) {
     const [data, setData] = useState(null);
     const [allOrders, setAllOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -212,6 +296,8 @@ export default function Dashboard({ onMenuClick }) {
             </div>
 
             <div className="page-container">
+                {/* Free Trial Banner */}
+                <FreeTrialBanner createdAt={auth?.created_at} />
                 {/* Overdue alert banner */}
                 {data?.overdueCount > 0 && (
                     <div className="alert alert-warning flex gap-8 mb-16" onClick={() => handleKpiCardClick('overdue')} style={{ cursor: 'pointer' }}>
