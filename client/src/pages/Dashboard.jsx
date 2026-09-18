@@ -55,7 +55,6 @@ function TrialPill({ auth }) {
 
     const urgency = timeLeft.days < 3;
 
-    // Build readable string: "28d · 10h · 45m · 32s"
     const parts = [];
     if (timeLeft.days > 0)  parts.push(`${timeLeft.days}d`);
     parts.push(`${String(timeLeft.hours).padStart(2,'0')}h`);
@@ -71,6 +70,77 @@ function TrialPill({ auth }) {
         </div>
     );
 }
+
+/* ─── Free Trial Dashboard Popup Banner ────────────────────────────────── */
+function FreeTrialPopup({ auth }) {
+    const expiresAt = resolveExpiresAt(auth);
+    const [timeLeft, setTimeLeft] = useState(() => getTimeLeftFromExpiry(expiresAt));
+
+    useEffect(() => {
+        if (!expiresAt) return;
+        setTimeLeft(getTimeLeftFromExpiry(expiresAt));
+        const id = setInterval(() => setTimeLeft(getTimeLeftFromExpiry(expiresAt)), 1000);
+        return () => clearInterval(id);
+    }, [expiresAt]);
+
+    const isFree = !auth?.subscription_type || auth.subscription_type === 'Free';
+    if (!isFree || !timeLeft) return null;
+
+    const urgency = timeLeft.days < 3;
+    const totalMs  = TRIAL_DURATION_MS;
+    const usedMs   = totalMs - (timeLeft.days * 86400000 + timeLeft.hours * 3600000 + timeLeft.minutes * 60000 + timeLeft.seconds * 1000);
+    const pct      = Math.max(0, Math.min(100, (usedMs / totalMs) * 100));
+
+    return (
+        <div className={`ftpopup${urgency ? ' ftpopup--urgent' : ''}`}>
+            {/* shimmer streak */}
+            <div className="ftpopup__shimmer" />
+
+            {/* LEFT: live dot + label */}
+            <div className="ftpopup__left">
+                <span className="ftpopup__dot" />
+                <div>
+                    <div className="ftpopup__heading">FREE TRIAL</div>
+                    <div className="ftpopup__sub">Time Remaining</div>
+                </div>
+            </div>
+
+            {/* CENTER: digit cards */}
+            <div className="ftpopup__clock">
+                <div className="ftpopup__unit">
+                    <span className="ftpopup__digit">{String(timeLeft.days).padStart(2,'0')}</span>
+                    <span className="ftpopup__unit-label">Days</span>
+                </div>
+                <span className="ftpopup__colon">:</span>
+                <div className="ftpopup__unit">
+                    <span className="ftpopup__digit">{String(timeLeft.hours).padStart(2,'0')}</span>
+                    <span className="ftpopup__unit-label">Hrs</span>
+                </div>
+                <span className="ftpopup__colon">:</span>
+                <div className="ftpopup__unit">
+                    <span className="ftpopup__digit">{String(timeLeft.minutes).padStart(2,'0')}</span>
+                    <span className="ftpopup__unit-label">Min</span>
+                </div>
+                <span className="ftpopup__colon">:</span>
+                <div className="ftpopup__unit">
+                    <span className="ftpopup__digit">{String(timeLeft.seconds).padStart(2,'0')}</span>
+                    <span className="ftpopup__unit-label">Sec</span>
+                </div>
+            </div>
+
+            {/* RIGHT: progress bar + days left badge */}
+            <div className="ftpopup__right">
+                <div className="ftpopup__progress-track">
+                    <div className="ftpopup__progress-fill" style={{ width: `${100 - pct}%` }} />
+                </div>
+                <div className="ftpopup__badge">
+                    {timeLeft.days > 0 ? `${timeLeft.days} days left` : `${timeLeft.hours}h ${timeLeft.minutes}m left`}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 
 function EnhancedStatCard({ value, label, icon: Icon, colorTheme, active, onClick }) {
     const themes = {
@@ -295,6 +365,9 @@ export default function Dashboard({ onMenuClick, auth }) {
             </div>
 
             <div className="page-container">
+                {/* ─── FREE TRIAL LIVE POPUP BANNER ─── */}
+                <FreeTrialPopup auth={trialInfo} />
+
                 {/* Overdue alert banner */}
                 {data?.overdueCount > 0 && (
                     <div className="alert alert-warning flex gap-8 mb-16" onClick={() => handleKpiCardClick('overdue')} style={{ cursor: 'pointer' }}>
