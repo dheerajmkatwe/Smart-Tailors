@@ -1133,7 +1133,7 @@ router.post('/razorpay-create-subscription-order', async (req, res) => {
             sql: 'SELECT razorpay_key_id FROM tenants WHERE tenant_id = ? LIMIT 1',
             args: [tenant_id]
         });
-        const keyId = (tenantRs.rows[0]?.razorpay_key_id) || process.env.RAZORPAY_KEY_ID || 'rzp_test_TdXK8RDufJvO6D';
+        const keyId = (tenantRs.rows[0]?.razorpay_key_id) || process.env.RAZORPAY_KEY_ID;
         const orderId = 'order_sub_' + require('crypto').randomBytes(8).toString('hex');
 
         res.json({
@@ -1161,7 +1161,7 @@ router.post('/razorpay-verify-subscription-payment', async (req, res) => {
             sql: 'SELECT razorpay_key_secret FROM tenants WHERE tenant_id = ? LIMIT 1',
             args: [tenant_id]
         });
-        const keySecret = (tenantRs.rows[0]?.razorpay_key_secret) || process.env.RAZORPAY_KEY_SECRET || 'BlUpg1glkwh7q9WEWhDrAflA';
+        const keySecret = (tenantRs.rows[0]?.razorpay_key_secret) || process.env.RAZORPAY_KEY_SECRET;
 
         if (keySecret && razorpay_order_id && razorpay_signature) {
             const crypto = require('crypto');
