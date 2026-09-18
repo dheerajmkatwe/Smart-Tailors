@@ -1,16 +1,16 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Package, Clock, CheckCircle, DollarSign,
     Users, ShoppingBag, AlertTriangle, TrendingUp,
-    Eye, Plus, PlusCircle, ClipboardList, Menu, ArrowRight, Timer
+    Eye, Plus, PlusCircle, ClipboardList, Menu, ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
 
-/* ─── Free Trial Countdown Banner ─────────────────────────────────────── */
+/* ─── Free Trial Pill (compact topbar badge) ───────────────────────────── */
 const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function getTimeLeftFromExpiry(expiresAt) {
@@ -22,83 +22,46 @@ function getTimeLeftFromExpiry(expiresAt) {
     const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    const pct     = Math.max(0, Math.min(100, (diff / TRIAL_DURATION_MS) * 100));
-    return { days, hours, minutes, seconds, pct };
+    return { days, hours, minutes, seconds };
 }
 
 function resolveExpiresAt(auth) {
-    // Primary: subscription_expires_at field
     if (auth?.subscription_expires_at) return auth.subscription_expires_at;
-    // Fallback: created_at + 30 days
     if (auth?.created_at) {
         return new Date(new Date(auth.created_at).getTime() + TRIAL_DURATION_MS).toISOString();
     }
     return null;
 }
 
-function FreeTrialBanner({ auth }) {
+function TrialPill({ auth }) {
     const expiresAt = resolveExpiresAt(auth);
     const [timeLeft, setTimeLeft] = useState(() => getTimeLeftFromExpiry(expiresAt));
 
     useEffect(() => {
         if (!expiresAt) return;
-        setTimeLeft(getTimeLeftFromExpiry(expiresAt)); // recalc immediately if auth changed
-        const id = setInterval(() => {
-            setTimeLeft(getTimeLeftFromExpiry(expiresAt));
-        }, 1000);
+        setTimeLeft(getTimeLeftFromExpiry(expiresAt));
+        const id = setInterval(() => setTimeLeft(getTimeLeftFromExpiry(expiresAt)), 1000);
         return () => clearInterval(id);
     }, [expiresAt]);
 
-    // Only show during Free trial and while time remains
     const isFree = !auth?.subscription_type || auth.subscription_type === 'Free';
     if (!isFree || !timeLeft) return null;
 
     const urgency = timeLeft.days < 3;
 
+    // Build readable string: "28d · 10h · 45m · 32s"
+    const parts = [];
+    if (timeLeft.days > 0)  parts.push(`${timeLeft.days}d`);
+    parts.push(`${String(timeLeft.hours).padStart(2,'0')}h`);
+    parts.push(`${String(timeLeft.minutes).padStart(2,'0')}m`);
+    parts.push(`${String(timeLeft.seconds).padStart(2,'0')}s`);
+    const countdownStr = parts.join(' · ');
+
     return (
-        <div className="free-trial-banner" data-urgent={urgency}>
-            <div className="ftb-shimmer" />
-
-            <div className="ftb-left">
-                <span className="ftb-live-dot" />
-                <Timer size={15} style={{ opacity: 0.9 }} />
-                <span className="ftb-title">Free Trial</span>
-            </div>
-
-            <div className="ftb-center">
-                <div className="ftb-countdown">
-                    <span className="ftb-unit">
-                        <span className="ftb-num">{String(timeLeft.days).padStart(2, '0')}</span>
-                        <span className="ftb-label">days</span>
-                    </span>
-                    <span className="ftb-sep">:</span>
-                    <span className="ftb-unit">
-                        <span className="ftb-num">{String(timeLeft.hours).padStart(2, '0')}</span>
-                        <span className="ftb-label">hrs</span>
-                    </span>
-                    <span className="ftb-sep">:</span>
-                    <span className="ftb-unit">
-                        <span className="ftb-num">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                        <span className="ftb-label">min</span>
-                    </span>
-                    <span className="ftb-sep">:</span>
-                    <span className="ftb-unit">
-                        <span className="ftb-num">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                        <span className="ftb-label">sec</span>
-                    </span>
-                </div>
-                <div className="ftb-progress-track">
-                    <div className="ftb-progress-fill" style={{ width: `${timeLeft.pct}%` }} />
-                </div>
-            </div>
-
-            <div className="ftb-right">
-                <span className="ftb-remaining">
-                    {timeLeft.days > 0
-                        ? `${timeLeft.days}d left`
-                        : `${timeLeft.hours}h ${timeLeft.minutes}m left`}
-                </span>
-            </div>
+        <div className={`trial-pill${urgency ? ' trial-pill--urgent' : ''}`}>
+            <span className="trial-pill__dot" />
+            <span className="trial-pill__label">Trial:</span>
+            <span className="trial-pill__time">{countdownStr}</span>
         </div>
     );
 }
@@ -287,7 +250,10 @@ export default function Dashboard({ onMenuClick, auth }) {
                     </div>
                 </div>
 
-                {/* Create New Order Button - Always text & icon visible */}
+                {/* Centre: Trial Pill */}
+                <TrialPill auth={auth} />
+
+                {/* Create New Order Button */}
                 <Link to="/new-order" className="btn btn-primary topbar-create-order-btn" style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -305,8 +271,6 @@ export default function Dashboard({ onMenuClick, auth }) {
             </div>
 
             <div className="page-container">
-                {/* Free Trial Banner */}
-                <FreeTrialBanner auth={auth} />
                 {/* Overdue alert banner */}
                 {data?.overdueCount > 0 && (
                     <div className="alert alert-warning flex gap-8 mb-16" onClick={() => handleKpiCardClick('overdue')} style={{ cursor: 'pointer' }}>

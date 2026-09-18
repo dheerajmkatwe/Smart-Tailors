@@ -1660,188 +1660,87 @@ tfoot tr td {
   .topbar-title { font-size: 14px; }
 }
 
-/* ── Free Trial Countdown Banner ─────────────────────────────────────────── */
-@keyframes ftb-blink {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  50%       { opacity: 0.6; transform: scale(0.85); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+/* ── Free Trial Pill ─────────────────────────────────────────────────────── */
+@keyframes trial-dot-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    box-shadow: 0 0 0 0   rgba(217, 119, 6, 0.8); }
+  50%       { opacity: 0.7; transform: scale(0.82); box-shadow: 0 0 0 5px rgba(217, 119, 6, 0); }
 }
-@keyframes ftb-pulse-ring {
-  0%   { transform: scale(1); opacity: 0.8; }
-  70%  { transform: scale(2.2); opacity: 0; }
-  100% { transform: scale(2.2); opacity: 0; }
+@keyframes trial-dot-ring {
+  0%   { transform: scale(1);   opacity: 0.75; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
-@keyframes ftb-shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-@keyframes ftb-slide-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes trial-pill-in {
+  from { opacity: 0; transform: scale(0.88) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
 }
 
-.free-trial-banner {
-  position: relative;
-  overflow: hidden;
-  display: flex;
+.trial-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 16px;
-  background: linear-gradient(135deg, #1a0a10 0%, #2d0d1a 50%, #1a0a10 100%);
-  border: 1.5px solid rgba(220, 38, 38, 0.35);
-  border-radius: var(--radius-lg);
-  padding: 12px 20px;
-  margin-bottom: 18px;
-  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.15), 0 2px 8px rgba(0,0,0,0.2);
-  animation: ftb-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  gap: 7px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+  background: rgba(255, 251, 235, 0.92);
+  box-shadow: 0 1px 6px rgba(217,119,6,0.12), 0 0 0 0 transparent;
+  animation: trial-pill-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.trial-pill:hover {
+  box-shadow: 0 2px 12px rgba(217,119,6,0.22);
+  border-color: rgba(217, 119, 6, 0.7);
 }
 
-/* Urgency mode — last 3 days */
-.free-trial-banner[data-urgent="true"] {
-  border-color: rgba(220, 38, 38, 0.65);
-  box-shadow: 0 4px 24px rgba(220, 38, 38, 0.3), 0 0 0 1px rgba(220, 38, 38, 0.15);
-  background: linear-gradient(135deg, #2a0808 0%, #450d0d 50%, #2a0808 100%);
+/* Urgency: last 3 days — turns red */
+.trial-pill--urgent {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: rgba(255, 241, 241, 0.95);
 }
+.trial-pill--urgent .trial-pill__dot      { background: #ef4444; animation-name: trial-dot-pulse; }
+.trial-pill--urgent .trial-pill__dot::before { background: #ef4444; }
+.trial-pill--urgent .trial-pill__label    { color: #b91c1c; }
+.trial-pill--urgent .trial-pill__time     { color: #991b1b; }
 
-/* Shimmer streak */
-.ftb-shimmer {
-  position: absolute;
-  top: 0; left: 0;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.06),
-    transparent
-  );
-  animation: ftb-shimmer 3.5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Left section: live dot + label */
-.ftb-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  color: #f87171;
-}
-
-/* Blinking live red dot with ripple ring */
-.ftb-live-dot {
+/* Blinking amber dot with ripple */
+.trial-pill__dot {
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: #ef4444;
+  background: #d97706;
   flex-shrink: 0;
-  animation: ftb-blink 1.2s ease-in-out infinite;
+  animation: trial-dot-pulse 1.3s ease-in-out infinite;
 }
-.ftb-live-dot::before {
+.trial-pill__dot::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #ef4444;
-  animation: ftb-pulse-ring 1.4s ease-out infinite;
+  background: #d97706;
+  animation: trial-dot-ring 1.5s ease-out infinite;
 }
 
-.ftb-title {
+.trial-pill__label {
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #f87171;
-  white-space: nowrap;
-}
-
-/* Center: countdown + progress */
-.ftb-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-}
-
-.ftb-countdown {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ftb-unit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-}
-
-.ftb-num {
-  font-family: var(--font-serif);
-  font-size: 22px;
   font-weight: 700;
-  color: #fca5a5;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  min-width: 32px;
-  text-align: center;
+  color: #92400e;
+  letter-spacing: 0.03em;
+}
+
+.trial-pill__time {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #78350f;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-inter);
 }
 
-.ftb-label {
-  font-size: 8.5px;
-  font-weight: 700;
-  color: rgba(252, 165, 165, 0.55);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.ftb-sep {
-  font-size: 18px;
-  font-weight: 700;
-  color: rgba(220, 38, 38, 0.5);
-  line-height: 1;
-  margin-bottom: 10px;
-}
-
-.ftb-progress-track {
-  width: 100%;
-  max-width: 260px;
-  height: 4px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.ftb-progress-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #ef4444, #f87171);
-  transition: width 1s linear;
-}
-
-/* Right: compact day label */
-.ftb-right {
-  flex-shrink: 0;
-}
-
-.ftb-remaining {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(252, 165, 165, 0.7);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  text-transform: uppercase;
-}
-
-/* Mobile adjustments */
-@media (max-width: 600px) {
-  .free-trial-banner {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 14px;
-  }
-  .ftb-num { font-size: 17px; min-width: 24px; }
-  .ftb-right { width: 100%; text-align: center; }
-  .ftb-progress-track { max-width: 100%; }
+/* Hide on very small screens to avoid topbar clutter */
+@media (max-width: 500px) {
+  .trial-pill { display: none; }
 }
