@@ -750,27 +750,6 @@ export default function SuperAdmin() {
                                                     <td style={{ padding: '20px', textAlign: 'center' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                                             <button
-                                                                onClick={() => handleOpenSubscriptionModal(t)}
-                                                                title="Manage Premium Subscription Plan"
-                                                                style={{
-                                                                    padding: '8px 12px', borderRadius: '8px',
-                                                                    background: 'rgba(212, 175, 55, 0.1)', border: '1px solid rgba(212, 175, 55, 0.3)',
-                                                                    color: '#d4af37', fontSize: '11px', fontWeight: '600', cursor: 'pointer',
-                                                                    transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: '4px'
-                                                                }}
-                                                                onMouseEnter={e => {
-                                                                    e.currentTarget.style.background = '#d4af37';
-                                                                    e.currentTarget.style.color = '#000';
-                                                                }}
-                                                                onMouseLeave={e => {
-                                                                    e.currentTarget.style.background = 'rgba(212, 175, 55, 0.1)';
-                                                                    e.currentTarget.style.color = '#d4af37';
-                                                                }}
-                                                            >
-                                                                <Gift size={11} /> Plan
-                                                            </button>
-
-                                                            <button
                                                                 onClick={() => handleBlockTenantPhone(t.phone_number, t.shop_name)}
                                                                 title="Block Phone Number from Access"
                                                                 disabled={!t.phone_number}
@@ -969,8 +948,8 @@ export default function SuperAdmin() {
                 )}
             </div>
 
-            {/* Subscription Modal overlay */}
-            {showModal && selectedTenant && (
+            {/* Subscription Modal removed — subscriptions are managed automatically via Razorpay payments */}
+            {false && showModal && selectedTenant && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                     background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(12px)',
