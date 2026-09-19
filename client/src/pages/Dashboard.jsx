@@ -47,8 +47,6 @@ function resolveExpiresAt(auth) {
     return new Date(Date.now() + TRIAL_DURATION_MS).toISOString();
 }
 
-
-
 /* ─── Subscription Status Banner ────────────────────────────────────────── */
 function FreeTrialPopup({ auth }) {
     const expiresAt = resolveExpiresAt(auth);
@@ -61,89 +59,76 @@ function FreeTrialPopup({ auth }) {
         return () => clearInterval(id);
     }, [expiresAt]);
 
-    if (!timeLeft) return null; // expired or no expiry set
+    if (!timeLeft) return null;
 
     const subType = auth?.subscription_type || 'Free';
     const isFree = subType === 'Free';
     const isMonthly = subType === 'Monthly';
-    const isYearly = subType === 'Yearly';
 
-    // Color themes per plan
     const theme = isFree
-        ? { bg: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(14,165,233,0.06) 100%)', border: 'rgba(56,189,248,0.35)', dot: '#38bdf8', label: 'FREE TRIAL', sub: 'Time Remaining', badge: '#38bdf8', badgeBg: 'rgba(56,189,248,0.12)' }
+        ? { accent: '#38bdf8', glow: 'rgba(56,189,248,0.4)', label: 'FREE TRIAL', sub: 'Time Remaining', darkBg: 'linear-gradient(135deg, #0c2233 0%, #0a1e2e 100%)' }
         : isMonthly
-            ? { bg: 'linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(249,115,22,0.06) 100%)', border: 'rgba(251,146,60,0.35)', dot: '#fb923c', label: '₹1 TRIAL', sub: '30-Day Access', badge: '#fb923c', badgeBg: 'rgba(251,146,60,0.12)' }
-            : { bg: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(147,51,234,0.06) 100%)', border: 'rgba(168,85,247,0.35)', dot: '#c084fc', label: '₹9,999 PLAN', sub: 'Annual Access', badge: '#c084fc', badgeBg: 'rgba(168,85,247,0.12)' };
+            ? { accent: '#fb923c', glow: 'rgba(251,146,60,0.4)', label: '₹1 MONTHLY TRIAL', sub: '30-Day Access Active', darkBg: 'linear-gradient(135deg, #1f1208 0%, #160e06 100%)' }
+            : { accent: '#c084fc', glow: 'rgba(192,132,252,0.4)', label: '₹9,999 ANNUAL PLAN', sub: '365-Day Access Active', darkBg: 'linear-gradient(135deg, #1a0e24 0%, #130a1b 100%)' };
 
     const urgency = timeLeft.days < 3;
-    const showSeconds = isFree; // show MM:SS live for free trial only
-
-    // Progress bar — only meaningful for free trial
-    const totalMs = isFree ? TRIAL_DURATION_MS : (isMonthly ? 30 * 24 * 60 * 60 * 1000 : 365 * 24 * 60 * 60 * 1000);
-    const remainMs = timeLeft.days * 86400000 + timeLeft.hours * 3600000 + timeLeft.minutes * 60000 + timeLeft.seconds * 1000;
+    const totalMs = isFree ? TRIAL_DURATION_MS : (isMonthly ? 30*24*60*60*1000 : 365*24*60*60*1000);
+    const remainMs = timeLeft.days*86400000 + timeLeft.hours*3600000 + timeLeft.minutes*60000 + timeLeft.seconds*1000;
     const pct = Math.max(0, Math.min(100, (remainMs / totalMs) * 100));
 
-    const timeLabel = timeLeft.days > 0
-        ? `${timeLeft.days}d ${timeLeft.hours}h left`
-        : timeLeft.hours > 0
-            ? `${timeLeft.hours}h ${timeLeft.minutes}m left`
-            : `${timeLeft.minutes}m ${timeLeft.seconds}s left`;
+    const digitBox = (val, label, red = false) => (
+        <div style={{ textAlign: 'center' }}>
+            <div style={{
+                background: 'rgba(255,255,255,0.12)', border: `1.5px solid ${urgency && red ? '#ef4444' : theme.accent}`,
+                borderRadius: 10, padding: '6px 12px', minWidth: 52, fontSize: 26, fontWeight: 900,
+                color: urgency && red ? '#ef4444' : '#ffffff', fontFamily: '"Courier New", monospace',
+                letterSpacing: '0.05em', textShadow: `0 0 12px ${urgency && red ? '#ef4444' : theme.accent}77`
+            }}>{String(val).padStart(2,'0')}</div>
+            <div style={{ fontSize: 10, color: '#ffffff', opacity: 0.9, marginTop: 4, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</div>
+        </div>
+    );
+
+    const sep = <span style={{ color: theme.accent, fontWeight: 900, fontSize: 22, marginBottom: 18, opacity: 0.9 }}>:</span>;
 
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-            background: theme.bg, border: `1.5px solid ${theme.border}`,
-            borderRadius: 14, padding: '12px 18px', marginBottom: 18,
+            display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+            background: theme.darkBg,
+            border: `2px solid ${theme.accent}`,
+            borderRadius: 16, padding: '14px 20px', marginBottom: 20,
             position: 'relative', overflow: 'hidden',
-            boxShadow: `0 4px 20px ${theme.border}`
+            boxShadow: `0 6px 28px ${theme.glow}, 0 4px 12px rgba(0,0,0,0.5)`
         }}>
-            {/* Shimmer */}
-            <div style={{ position: 'absolute', top: 0, left: '-60%', width: '40%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'shimmerMove 2.5s infinite', pointerEvents: 'none' }} />
+            {/* Shimmer sweep */}
+            <div style={{ position: 'absolute', top: 0, left: '-80%', width: '50%', height: '100%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)', animation: 'shimmerMove 3s infinite', pointerEvents: 'none' }} />
 
-            {/* LEFT: plan label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 120 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: theme.dot, boxShadow: `0 0 8px ${theme.dot}`, animation: urgency ? 'blink 0.8s infinite' : 'blink 1.8s infinite', flexShrink: 0 }} />
+            {/* LEFT — plan label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 150 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: theme.accent, boxShadow: `0 0 10px ${theme.accent}`, animation: `blink ${urgency ? '0.7s' : '2s'} infinite`, flexShrink: 0 }} />
                 <div>
-                    <div style={{ fontSize: 11, fontWeight: 900, color: theme.dot, letterSpacing: '0.08em' }}>{theme.label}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>{theme.sub}</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: theme.accent, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{theme.label}</div>
+                    <div style={{ fontSize: 11, color: '#ffffff', opacity: 0.8, marginTop: 2, fontWeight: 600 }}>{theme.sub}</div>
                 </div>
             </div>
 
-            {/* CENTER: digit clock */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center' }}>
-                {/* Days — always show */}
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '4px 10px', fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', minWidth: 44 }}>{String(timeLeft.days).padStart(2,'0')}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 2, textTransform: 'uppercase' }}>Days</div>
-                </div>
-                <span style={{ color: theme.dot, fontWeight: 900, fontSize: 18, marginBottom: 12 }}>:</span>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '4px 10px', fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', minWidth: 44 }}>{String(timeLeft.hours).padStart(2,'0')}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 2, textTransform: 'uppercase' }}>Hrs</div>
-                </div>
-                <span style={{ color: theme.dot, fontWeight: 900, fontSize: 18, marginBottom: 12 }}>:</span>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '4px 10px', fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', minWidth: 44 }}>{String(timeLeft.minutes).padStart(2,'0')}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 2, textTransform: 'uppercase' }}>Min</div>
-                </div>
-                {showSeconds && (
-                    <>
-                        <span style={{ color: theme.dot, fontWeight: 900, fontSize: 18, marginBottom: 12 }}>:</span>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${theme.border}`, borderRadius: 8, padding: '4px 10px', fontSize: 22, fontWeight: 900, color: urgency ? '#ef4444' : '#fff', fontFamily: 'monospace', minWidth: 44 }}>{String(timeLeft.seconds).padStart(2,'0')}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 2, textTransform: 'uppercase' }}>Sec</div>
-                        </div>
-                    </>
-                )}
+            {/* CENTER — digit countdown (seconds included for ALL plans) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' }}>
+                {digitBox(timeLeft.days, 'Days')}
+                {sep}
+                {digitBox(timeLeft.hours, 'Hours')}
+                {sep}
+                {digitBox(timeLeft.minutes, 'Mins')}
+                {sep}
+                {digitBox(timeLeft.seconds, 'Secs', true)}
             </div>
 
-            {/* RIGHT: progress + badge */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, minWidth: 100 }}>
-                <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${theme.dot}, ${theme.dot}aa)`, borderRadius: 3, transition: 'width 1s linear' }} />
+            {/* RIGHT — progress bar + badge */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, minWidth: 120 }}>
+                <div style={{ width: '100%', height: 7, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}dd)`, borderRadius: 4, transition: 'width 1s linear', boxShadow: `0 0 6px ${theme.glow}` }} />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 800, color: theme.dot, background: theme.badgeBg, border: `1px solid ${theme.border}`, padding: '2px 8px', borderRadius: 20 }}>
-                    {urgency && '⚠️ '}{timeLabel}
+                <span style={{ fontSize: 12, fontWeight: 900, color: urgency ? '#ffffff' : theme.accent, background: urgency ? '#dc2626' : 'rgba(255,255,255,0.12)', border: `1.5px solid ${urgency ? '#ef4444' : theme.accent}`, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                    {urgency ? '⚠️ ' : ''}{timeLeft.days > 0 ? `${timeLeft.days}d ${timeLeft.hours}h left` : timeLeft.hours > 0 ? `${timeLeft.hours}h ${timeLeft.minutes}m left` : `${timeLeft.minutes}m ${timeLeft.seconds}s left`}
                 </span>
             </div>
         </div>
