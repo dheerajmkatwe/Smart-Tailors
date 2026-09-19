@@ -11,7 +11,7 @@ import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
 
 /* ─── Free Trial Pill (compact topbar badge) ───────────────────────────── */
-const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const TRIAL_DURATION_MS = 1 * 60 * 1000; // 1 minute (for testing trial expiry)
 
 function getTimeLeftFromExpiry(expiresAt) {
     if (!expiresAt) return null;
@@ -26,17 +26,14 @@ function getTimeLeftFromExpiry(expiresAt) {
 }
 
 function resolveExpiresAt(auth) {
-    const now = Date.now();
-    const fallback = new Date(now + TRIAL_DURATION_MS).toISOString();
     if (auth?.subscription_expires_at) {
-        const t = new Date(auth.subscription_expires_at).getTime();
-        return t > now ? auth.subscription_expires_at : fallback;
+        return auth.subscription_expires_at;
     }
     if (auth?.created_at) {
         const t = new Date(auth.created_at).getTime() + TRIAL_DURATION_MS;
-        return t > now ? new Date(t).toISOString() : fallback;
+        return new Date(t).toISOString();
     }
-    return fallback;
+    return new Date(Date.now() + TRIAL_DURATION_MS).toISOString();
 }
 
 
@@ -104,7 +101,7 @@ function FreeTrialPopup({ auth }) {
                     <div className="ftpopup__progress-fill" style={{ width: `${100 - pct}%` }} />
                 </div>
                 <div className="ftpopup__badge">
-                    {timeLeft.days > 0 ? `${timeLeft.days} days left` : `${timeLeft.hours}h ${timeLeft.minutes}m left`}
+                    {timeLeft.days > 0 ? `${timeLeft.days} days left` : timeLeft.hours > 0 ? `${timeLeft.hours}h ${timeLeft.minutes}m left` : `${timeLeft.minutes}m ${timeLeft.seconds}s left`}
                 </div>
             </div>
         </div>
