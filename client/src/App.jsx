@@ -108,8 +108,8 @@ export default function App() {
     // Run check immediately on load
     checkStatus();
 
-    // Periodically check every 10 seconds to auto-detect trial expiry while logged in
-    const interval = setInterval(checkStatus, 10000);
+    // Periodically check every 3 seconds to auto-detect trial expiry while logged in
+    const interval = setInterval(checkStatus, 3000);
     return () => clearInterval(interval);
   }, [auth?.tenant_id, isOnline]);
 

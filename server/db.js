@@ -628,7 +628,13 @@ async function checkPremiumStatus(tenantId) {
 
     const now = new Date();
     if (tenant.subscription_expires_at) {
-      return new Date(tenant.subscription_expires_at) > now;
+      let s = String(tenant.subscription_expires_at).trim();
+      if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T');
+      if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) s += 'Z';
+      const expDate = new Date(s);
+      if (!isNaN(expDate.getTime())) {
+        return expDate > now;
+      }
     }
 
     // Fallback logic for legacy accounts without explicit subscription_expires_at

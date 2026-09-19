@@ -4,8 +4,10 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 
 /* ─── Shop Overview Modal ────────────────────────────────────────── */
-function ShopOverviewModal({ tenant, onClose }) {
+function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
     const [now, setNow] = useState(Date.now());
+    const [customMins, setCustomMins] = useState('');
+    const [updatingTrial, setUpdatingTrial] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -13,6 +15,33 @@ function ShopOverviewModal({ tenant, onClose }) {
     }, []);
 
     if (!tenant) return null;
+
+    const handleSetTrial = async (mins) => {
+        if (!mins || mins <= 0) {
+            toast.error('Please enter a valid duration in minutes.');
+            return;
+        }
+        setUpdatingTrial(true);
+        try {
+            const res = await api.post('/auth/super-admin/set-trial-duration', {
+                tenant_id: tenant.tenant_id,
+                duration_minutes: mins
+            });
+            toast.success(res.data.message || `Trial set to ${mins} minute(s)`);
+            if (onUpdateTenant) {
+                onUpdateTenant({
+                    ...tenant,
+                    subscription_expires_at: res.data.subscription_expires_at,
+                    subscription_type: 'Free'
+                });
+            }
+            setCustomMins('');
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to update trial duration');
+        } finally {
+            setUpdatingTrial(false);
+        }
+    };
 
     const formatDateTime = (dateStr) => {
         if (!dateStr) return 'N/A';
@@ -77,7 +106,7 @@ function ShopOverviewModal({ tenant, onClose }) {
         }}>
             <div style={{
                 background: '#12121c', border: '1px solid #28283e', borderRadius: '20px',
-                maxWidth: '560px', width: '100%', padding: '32px', boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+                maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '32px', boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
                 color: '#fff', position: 'relative', fontFamily: '"Inter", sans-serif'
             }}>
                 {/* Close X button */}
@@ -161,6 +190,75 @@ function ShopOverviewModal({ tenant, onClose }) {
                                 </span>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Decrease / Custom Trial Duration Controls Box */}
+                <div style={{
+                    background: 'rgba(239, 68, 68, 0.05)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    borderRadius: 16, padding: '18px', marginBottom: 24
+                }}>
+                    <div style={{ fontSize: 12, color: '#f87171', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Calendar size={14} /> Decrease / Set Custom Trial Duration
+                    </div>
+                    <p style={{ fontSize: 11.5, color: '#aaa', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+                        Instantly set remaining trial duration for <strong>{tenant.shop_name}</strong>. Once elapsed, the account will be automatically logged out and asked for payment.
+                    </p>
+
+                    {/* Quick Presets */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                        {[
+                            { label: '⚡ 2 Mins', mins: 2 },
+                            { label: '⚡ 5 Mins', mins: 5 },
+                            { label: '⚡ 10 Mins', mins: 10 },
+                            { label: '⚡ 30 Mins', mins: 30 },
+                            { label: '⚡ 1 Hour', mins: 60 },
+                            { label: '⚡ 30 Days (Full)', mins: 43200 }
+                        ].map((p) => (
+                            <button
+                                key={p.mins}
+                                disabled={updatingTrial}
+                                onClick={() => handleSetTrial(p.mins)}
+                                style={{
+                                    padding: '7px 13px', borderRadius: 8, background: '#1c1c2a',
+                                    border: '1px solid rgba(212,175,55,0.3)', color: '#d4af37',
+                                    fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                                    transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#d4af37'; e.currentTarget.style.color = '#000'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#1c1c2a'; e.currentTarget.style.color = '#d4af37'; }}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Custom Minutes Input */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="Enter custom minutes (e.g. 5)"
+                            value={customMins}
+                            onChange={e => setCustomMins(e.target.value)}
+                            style={{
+                                flex: 1, padding: '9px 12px', borderRadius: 8,
+                                background: '#141420', border: '1px solid #2d2d44',
+                                color: '#fff', fontSize: 12, outline: 'none'
+                            }}
+                        />
+                        <button
+                            disabled={updatingTrial || !customMins}
+                            onClick={() => handleSetTrial(parseFloat(customMins))}
+                            style={{
+                                padding: '9px 16px', borderRadius: 8, background: '#ef4444',
+                                border: 'none', color: '#fff', fontSize: 12, fontWeight: 700,
+                                cursor: 'pointer', transition: 'all 0.2s', opacity: (updatingTrial || !customMins) ? 0.6 : 1
+                            }}
+                        >
+                            {updatingTrial ? 'Setting...' : 'Set Trial'}
+                        </button>
                     </div>
                 </div>
 
@@ -1542,7 +1640,11 @@ export default function SuperAdmin() {
             {overviewTenant && (
                 <ShopOverviewModal 
                     tenant={overviewTenant} 
-                    onClose={() => setOverviewTenant(null)} 
+                    onClose={() => setOverviewTenant(null)}
+                    onUpdateTenant={(updated) => {
+                        setOverviewTenant(updated);
+                        fetchTenants();
+                    }}
                 />
             )}
         </div>

@@ -150,7 +150,10 @@ router.post('/login', async (req, res) => {
         const now = new Date();
         let expiresAt;
         if (tenant.subscription_expires_at) {
-            expiresAt = new Date(tenant.subscription_expires_at);
+            let s = String(tenant.subscription_expires_at).trim();
+            if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T');
+            if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) s += 'Z';
+            expiresAt = new Date(s);
         } else {
             const createdAt = new Date(tenant.created_at || Date.now());
             const days = tenant.subscription_type === 'Yearly' ? 365 : 30;
@@ -972,6 +975,57 @@ router.delete('/super-admin/blocked-numbers/:phone_number', async (req, res) => 
         });
         res.json({ success: true, message: `Phone number ${phone_number} successfully unblocked.` });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/auth/super-admin/set-trial-duration
+// Set or decrease trial duration for a specific boutique user (e.g., 2 mins, 5 mins, 10 mins, etc.)
+router.post('/super-admin/set-trial-duration', async (req, res) => {
+    try {
+        const { tenant_id, duration_minutes } = req.body;
+        if (!tenant_id || duration_minutes === undefined || duration_minutes === null) {
+            return res.status(400).json({ error: 'tenant_id and duration_minutes are required.' });
+        }
+
+        const mins = parseFloat(duration_minutes);
+        if (isNaN(mins) || mins < 0) {
+            return res.status(400).json({ error: 'Invalid trial duration specified.' });
+        }
+
+        const tenantRs = await db.execute({
+            sql: 'SELECT * FROM tenants WHERE tenant_id = ? LIMIT 1',
+            args: [tenant_id]
+        });
+
+        if (tenantRs.rows.length === 0) {
+            return res.status(404).json({ error: 'Shop identity not found.' });
+        }
+
+        const tenant = tenantRs.rows[0];
+
+        // Calculate new expiration ISO timestamp from current server time
+        const newExpiresAt = new Date(Date.now() + mins * 60 * 1000).toISOString();
+
+        await db.execute({
+            sql: `UPDATE tenants 
+                  SET subscription_expires_at = ?,
+                      subscription_type = 'Free'
+                  WHERE tenant_id = ?`,
+            args: [newExpiresAt, tenant_id]
+        });
+
+        console.log(`⏱️ Super Admin set custom trial duration for shop "${tenant.shop_name}" (${tenant_id}) -> ${mins} minutes (Expires: ${newExpiresAt})`);
+
+        res.json({
+            success: true,
+            message: `🎉 Trial duration updated to ${mins} minute(s) for "${tenant.shop_name}".`,
+            tenant_id,
+            subscription_expires_at: newExpiresAt,
+            subscription_type: 'Free'
+        });
+    } catch (err) {
+        console.error('Error updating custom trial duration:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
