@@ -99,12 +99,12 @@ export default function NewOrder({ onMenuClick, auth }) {
     const navigate = useNavigate();
     const phoneRef = useRef();
 
-    const [initialDraft] = useState(() => {
-        try {
-            const d = localStorage.getItem('newOrderDraft');
-            return d ? JSON.parse(d) : null;
-        } catch { return null; }
-    });
+    // Always start with a blank form — no auto-restore from localStorage
+    const initialDraft = null;
+    useEffect(() => {
+        // Clear any stale draft from previous test sessions
+        localStorage.removeItem('newOrderDraft');
+    }, []);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -114,7 +114,7 @@ export default function NewOrder({ onMenuClick, auth }) {
     const [customerFound, setCustomerFound] = useState(initialDraft?.customerFound ?? false);
 
     // Dates & Assignment
-    const [bookingDate, setBookingDate] = useState(today); // Always default to today to prevent stale dates from drafts
+    const [bookingDate, setBookingDate] = useState(today);
     const [deliveryDate, setDeliveryDate] = useState(initialDraft?.deliveryDate || '');
     const [advancePaid, setAdvancePaid] = useState(initialDraft?.advancePaid || '');
     const [paymentMethod, setPaymentMethod] = useState(initialDraft?.paymentMethod || 'Cash');
