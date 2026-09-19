@@ -1,3 +1,8 @@
+import React, { useState, useEffect } from 'react';
+import { Lock, Mail, Users, ShoppingBag, Store, LogOut, Search, MapPin, Hash, UserCheck, Calendar, CreditCard, Gift, Copy, Send, CheckCircle, Info, X, Trash2, Ban, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../api/axios';
+
 /* ─── Shop Overview Modal ────────────────────────────────────────── */
 function ShopOverviewModal({ tenant, onClose }) {
     const [now, setNow] = useState(Date.now());
