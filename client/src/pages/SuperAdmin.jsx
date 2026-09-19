@@ -1,7 +1,199 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, Mail, Users, ShoppingBag, Store, LogOut, Search, MapPin, Hash, UserCheck, Calendar, CreditCard, Gift, Copy, Send, CheckCircle, Info, X, Trash2, Ban, ShieldAlert, Eye, EyeOff } from 'lucide-react';
-import toast from 'react-hot-toast';
-import api from '../api/axios';
+/* ─── Shop Overview Modal ────────────────────────────────────────── */
+function ShopOverviewModal({ tenant, onClose }) {
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    if (!tenant) return null;
+
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        let s = String(dateStr).trim();
+        if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T');
+        if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) s += 'Z';
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    };
+
+    const getRemainingTime = () => {
+        let expiresAtStr = tenant.subscription_expires_at;
+        if (!expiresAtStr && tenant.created_at) {
+            let cs = String(tenant.created_at).trim();
+            if (cs.includes(' ') && !cs.includes('T')) cs = cs.replace(' ', 'T');
+            if (!cs.endsWith('Z') && !cs.includes('+') && !cs.includes('-')) cs += 'Z';
+            const cd = new Date(cs).getTime();
+            expiresAtStr = new Date(cd + 30 * 24 * 60 * 60 * 1000).toISOString();
+        }
+        if (!expiresAtStr) return { expired: true, text: 'No expiration date found' };
+
+        let s = String(expiresAtStr).trim();
+        if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T');
+        if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) s += 'Z';
+
+        const expMs = new Date(s).getTime();
+        const diff = expMs - now;
+
+        if (diff <= 0) {
+            return { expired: true, text: 'Expired' };
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        return {
+            expired: false,
+            days, hours, minutes, seconds,
+            text: `${days}d ${hours}h ${minutes}m ${seconds}s`
+        };
+    };
+
+    const remaining = getRemainingTime();
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(5, 5, 10, 0.85)', backdropFilter: 'blur(12px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '20px'
+        }}>
+            <div style={{
+                background: '#12121c', border: '1px solid #28283e', borderRadius: '20px',
+                maxWidth: '560px', width: '100%', padding: '32px', boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+                color: '#fff', position: 'relative', fontFamily: '"Inter", sans-serif'
+            }}>
+                {/* Close X button */}
+                <button
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', borderRadius: '50%',
+                        width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#aaa'}
+                >
+                    <X size={18} />
+                </button>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+                    <div style={{
+                        width: 52, height: 52, borderRadius: 14, background: 'rgba(212,175,55,0.12)',
+                        border: '1px solid rgba(212,175,55,0.35)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', color: '#d4af37', fontWeight: '800', fontSize: 22
+                    }}>
+                        {tenant.shop_name?.substring(0, 2).toUpperCase() || 'ST'}
+                    </div>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff' }}>
+                            {tenant.shop_name}
+                        </h2>
+                        <div style={{ fontSize: 13, color: '#8888a0', marginTop: 3 }}>
+                            Shop ID: <span style={{ color: '#d4af37', fontFamily: 'monospace', fontWeight: 700 }}>{tenant.tenant_id}</span> | Owner: <strong style={{ color: '#fff' }}>{tenant.admin_name || 'N/A'}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Registration & Timing Overview Box */}
+                <div style={{
+                    background: 'linear-gradient(135deg, #181826 0%, #11111b 100%)',
+                    border: '1px solid #2a2a42', borderRadius: 16, padding: '22px', marginBottom: 24,
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
+                }}>
+                    <div style={{ fontSize: 11, color: '#d4af37', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Info size={14} /> Shop Timing & Expiry Overview
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {/* Registration Date & Time */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+                            <span style={{ fontSize: 13, color: '#a0a0c0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Calendar size={15} style={{ color: '#38bdf8' }} /> Registration Date & Time:
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                                {formatDateTime(tenant.created_at)}
+                            </span>
+                        </div>
+
+                        {/* Expiration Date & Time */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+                            <span style={{ fontSize: 13, color: '#a0a0c0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CreditCard size={15} style={{ color: '#c084fc' }} /> Expiration Date & Time:
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                                {formatDateTime(tenant.subscription_expires_at)}
+                            </span>
+                        </div>
+
+                        {/* Days & Time Left */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
+                            <span style={{ fontSize: 13, color: '#a0a0c0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                ⏳ Days & Time Left:
+                            </span>
+                            {remaining.expired ? (
+                                <span style={{ fontSize: 13, fontWeight: 800, color: '#ef4444', background: 'rgba(239,68,68,0.15)', padding: '4px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)' }}>
+                                    🔒 EXPIRED
+                                </span>
+                            ) : (
+                                <span style={{ fontSize: 14, fontWeight: 800, color: '#4ade80', background: 'rgba(74,222,128,0.12)', padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(74,222,128,0.3)', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'monospace' }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', animation: 'blink 1s infinite' }} />
+                                    {remaining.days}d {remaining.hours}h {remaining.minutes}m {remaining.seconds}s
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Additional Details Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+                    <div style={{ background: '#181824', padding: 14, borderRadius: 12, border: '1px solid #232338' }}>
+                        <div style={{ fontSize: 11, color: '#8888a0', textTransform: 'uppercase', fontWeight: 600 }}>Phone Number</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 4 }}>{tenant.phone_number || 'N/A'}</div>
+                    </div>
+                    <div style={{ background: '#181824', padding: 14, borderRadius: 12, border: '1px solid #232338' }}>
+                        <div style={{ fontSize: 11, color: '#8888a0', textTransform: 'uppercase', fontWeight: 600 }}>Subscription Plan</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4af37', marginTop: 4 }}>{tenant.subscription_type || 'Free'}</div>
+                    </div>
+                    <div style={{ background: '#181824', padding: 14, borderRadius: 12, border: '1px solid #232338' }}>
+                        <div style={{ fontSize: 11, color: '#8888a0', textTransform: 'uppercase', fontWeight: 600 }}>Address</div>
+                        <div style={{ fontSize: 12, color: '#ccc', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tenant.address || 'N/A'}</div>
+                    </div>
+                    <div style={{ background: '#181824', padding: 14, borderRadius: 12, border: '1px solid #232338' }}>
+                        <div style={{ fontSize: 11, color: '#8888a0', textTransform: 'uppercase', fontWeight: 600 }}>Orders / Clients</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', marginTop: 4 }}>{tenant.total_orders || 0} orders | {tenant.total_customers || 0} clients</div>
+                    </div>
+                </div>
+
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    style={{
+                        width: '100%', padding: '14px', borderRadius: 10, background: '#d4af37',
+                        border: 'none', color: '#0d0d11', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                        transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(212,175,55,0.2)'
+                    }}
+                >
+                    Close Overview
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function SuperAdmin() {
     const [auth, setAuth] = useState(() => {
@@ -22,6 +214,7 @@ export default function SuperAdmin() {
     // Modal / Subscription states
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [overviewTenant, setOverviewTenant] = useState(null);
     const [subType, setSubType] = useState('Free');
     const [saving, setSaving] = useState(false);
     const [generatedCard, setGeneratedCard] = useState(null);
@@ -609,12 +802,14 @@ export default function SuperAdmin() {
                                             return (
                                                 <tr 
                                                     key={t.tenant_id} 
+                                                    onClick={() => setOverviewTenant(t)}
                                                     style={{ 
                                                         borderBottom: '1px solid #1a1a26', 
                                                         background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                                                        transition: 'background 0.2s'
+                                                        transition: 'background 0.2s',
+                                                        cursor: 'pointer'
                                                     }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.02)'}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.04)'}
                                                     onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'}
                                                 >
                                                     {/* Boutique Details */}
@@ -776,7 +971,34 @@ export default function SuperAdmin() {
                                                     <td style={{ padding: '20px', textAlign: 'center' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                                             <button
-                                                                onClick={() => handleBlockTenantPhone(t.phone_number, t.shop_name)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setOverviewTenant(t);
+                                                                }}
+                                                                title="View Shop Timing & Registration Overview"
+                                                                style={{
+                                                                    padding: '8px 12px', borderRadius: '8px',
+                                                                    background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)',
+                                                                    color: '#38bdf8', fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+                                                                    transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                                                                }}
+                                                                onMouseEnter={e => {
+                                                                    e.currentTarget.style.background = '#38bdf8';
+                                                                    e.currentTarget.style.color = '#000';
+                                                                }}
+                                                                onMouseLeave={e => {
+                                                                    e.currentTarget.style.background = 'rgba(56, 189, 248, 0.1)';
+                                                                    e.currentTarget.style.color = '#38bdf8';
+                                                                }}
+                                                            >
+                                                                <Eye size={11} /> Overview
+                                                            </button>
+
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleBlockTenantPhone(t.phone_number, t.shop_name);
+                                                                }}
                                                                 title="Block Phone Number from Access"
                                                                 disabled={!t.phone_number}
                                                                 style={{
@@ -803,7 +1025,10 @@ export default function SuperAdmin() {
                                                             </button>
 
                                                             <button
-                                                                onClick={() => handleDeleteTenant(t.tenant_id, t.shop_name)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteTenant(t.tenant_id, t.shop_name);
+                                                                }}
                                                                 title="Delete Boutique Shop and All Data"
                                                                 disabled={t.tenant_id === 'default'}
                                                                 style={{
@@ -1306,6 +1531,14 @@ export default function SuperAdmin() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Shop Timing & Registration Overview Modal */}
+            {overviewTenant && (
+                <ShopOverviewModal 
+                    tenant={overviewTenant} 
+                    onClose={() => setOverviewTenant(null)} 
+                />
             )}
         </div>
     );
