@@ -11,7 +11,7 @@ import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
 
 /* ─── Free Trial Pill (compact topbar badge) ───────────────────────────── */
-const TRIAL_DURATION_MS = 1 * 60 * 1000; // 1 minute (for testing trial expiry)
+const TRIAL_DURATION_MS = 2 * 60 * 1000; // 2 minutes (for testing trial expiry)
 
 function getTimeLeftFromExpiry(expiresAt) {
     if (!expiresAt) return null;
