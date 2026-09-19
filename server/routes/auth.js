@@ -733,7 +733,7 @@ router.post('/super-admin/login', async (req, res) => {
 router.get('/super-admin/tenants', async (req, res) => {
     try {
         const rs = await db.execute(`
-            SELECT tenant_id, shop_name, address, phone_number, admin_name, gst_id, subscription_type, subscription_key, subscription_pin, pending_request_type, pending_request_date, created_at,
+            SELECT tenant_id, shop_name, address, phone_number, admin_name, gst_id, subscription_type, subscription_key, subscription_pin, pending_request_type, pending_request_date, created_at, subscription_expires_at,
             (SELECT COUNT(*) FROM orders WHERE orders.tenant_id = tenants.tenant_id) as total_orders,
             (SELECT COUNT(*) FROM customers WHERE customers.tenant_id = tenants.tenant_id) as total_customers
             FROM tenants 

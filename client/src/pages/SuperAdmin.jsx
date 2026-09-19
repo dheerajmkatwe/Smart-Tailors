@@ -682,55 +682,81 @@ export default function SuperAdmin() {
                                                     </td>
 
                                                     {/* Plan Status */}
-                                                    <td style={{ padding: '20px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                            <span style={{
-                                                                alignSelf: 'flex-start',
-                                                                padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                                                                background: displayPlan === 'Yearly' 
-                                                                    ? 'rgba(168, 85, 247, 0.15)' 
-                                                                    : displayPlan === 'Monthly' 
-                                                                        ? 'rgba(249, 115, 22, 0.15)' 
-                                                                        : displayPlan === 'New Free'
-                                                                            ? 'rgba(56, 189, 248, 0.15)'
-                                                                            : 'rgba(100, 116, 139, 0.15)',
-                                                                color: displayPlan === 'Yearly' 
-                                                                    ? '#c084fc' 
-                                                                    : displayPlan === 'Monthly' 
-                                                                        ? '#fb923c' 
-                                                                        : displayPlan === 'New Free'
-                                                                            ? '#38bdf8'
-                                                                            : '#94a3b8',
-                                                                border: displayPlan === 'Yearly' 
-                                                                    ? '1px solid rgba(168, 85, 247, 0.25)' 
-                                                                    : displayPlan === 'Monthly' 
-                                                                        ? '1px solid rgba(249, 115, 22, 0.25)' 
-                                                                        : displayPlan === 'New Free'
-                                                                            ? '1px solid rgba(56, 189, 248, 0.25)'
-                                                                            : '1px solid rgba(100, 116, 139, 0.25)'
-                                                            }}>
-                                                                {displayPlan}
-                                                            </span>
-                                                            {t.pending_request_type && (
-                                                                <span style={{
-                                                                    alignSelf: 'flex-start', marginTop: '4px',
-                                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '800',
-                                                                    background: 'rgba(212, 175, 55, 0.15)',
-                                                                    color: '#ffd54f', border: '1px solid rgba(212, 175, 55, 0.3)',
-                                                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                                    animation: 'pulse 1.8s infinite'
-                                                                }}>
-                                                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ffd54f' }} />
-                                                                    PENDING PAY: {t.pending_request_type.toUpperCase()}
-                                                                </span>
-                                                            )}
-                                                            {hasKey && (
-                                                                <span style={{ fontSize: '10px', color: '#68688d', fontFamily: 'monospace' }} title={`Key: ${t.subscription_key} (PIN: ${t.subscription_pin})`}>
-                                                                    Key: {t.subscription_key.substring(0, 4)}...{t.subscription_key.substring(8)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                                     <td style={{ padding: '20px' }}>
+                                                         {(() => {
+                                                             const now = new Date();
+                                                             const expiresAt = t.subscription_expires_at ? new Date(t.subscription_expires_at) : null;
+                                                             const isExpired = expiresAt ? now > expiresAt : false;
+                                                             const daysLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))) : null;
+                                                             const subType = t.subscription_type || 'Free';
+
+                                                             // Determine tier label and colors
+                                                             let tierLabel, tierColor, tierBg, tierBorder, tierEmoji, tierDesc;
+                                                             if (subType === 'Yearly') {
+                                                                 tierLabel = '₹9,999 / Year';
+                                                                 tierColor = '#c084fc';
+                                                                 tierBg = 'rgba(168, 85, 247, 0.12)';
+                                                                 tierBorder = 'rgba(168, 85, 247, 0.3)';
+                                                                 tierEmoji = '👑';
+                                                                 tierDesc = 'Yearly Paid';
+                                                             } else if (subType === 'Monthly') {
+                                                                 tierLabel = '₹1 Trial';
+                                                                 tierColor = '#fb923c';
+                                                                 tierBg = 'rgba(249, 115, 22, 0.12)';
+                                                                 tierBorder = 'rgba(249, 115, 22, 0.3)';
+                                                                 tierEmoji = '🔓';
+                                                                 tierDesc = '30-Day Access';
+                                                             } else {
+                                                                 tierLabel = 'Free Trial';
+                                                                 tierColor = '#38bdf8';
+                                                                 tierBg = 'rgba(56, 189, 248, 0.12)';
+                                                                 tierBorder = 'rgba(56, 189, 248, 0.3)';
+                                                                 tierEmoji = '🆓';
+                                                                 tierDesc = '1-Min Trial';
+                                                             }
+
+                                                             if (isExpired) {
+                                                                 tierColor = '#ef4444';
+                                                                 tierBg = 'rgba(239, 68, 68, 0.1)';
+                                                                 tierBorder = 'rgba(239, 68, 68, 0.3)';
+                                                                 tierEmoji = '🔒';
+                                                             }
+
+                                                             return (
+                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' }}>
+                                                                     {/* Tier badge */}
+                                                                     <span style={{
+                                                                         alignSelf: 'flex-start',
+                                                                         padding: '5px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                                                                         background: tierBg, color: tierColor, border: `1px solid ${tierBorder}`,
+                                                                         display: 'inline-flex', alignItems: 'center', gap: '5px'
+                                                                     }}>
+                                                                         {tierEmoji} {tierLabel}
+                                                                     </span>
+
+                                                                     {/* Tier description */}
+                                                                     <span style={{ fontSize: '10px', color: '#8888a0', fontWeight: '600' }}>
+                                                                         {tierDesc}
+                                                                     </span>
+
+                                                                     {/* Expiry info */}
+                                                                     {expiresAt && (
+                                                                         <span style={{
+                                                                             fontSize: '10px', fontWeight: '700',
+                                                                             color: isExpired ? '#ef4444' : daysLeft <= 3 ? '#fbbf24' : '#4ade80'
+                                                                         }}>
+                                                                             {isExpired
+                                                                                 ? '⛔ Expired — Locked Out'
+                                                                                 : daysLeft === 0
+                                                                                     ? '⚠️ Expires today!'
+                                                                                     : `✅ ${daysLeft}d left — Expires ${expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                                                             }
+                                                                         </span>
+                                                                     )}
+                                                                 </div>
+                                                             );
+                                                         })()}
+                                                     </td>
 
                                                     {/* Registration Date */}
                                                     <td style={{ padding: '20px' }}>
