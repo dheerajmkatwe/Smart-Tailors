@@ -65,9 +65,19 @@ export default function App() {
   const { isOnline, isSyncing, syncOfflineOrders } = useOfflineSync();
 
   useEffect(() => {
-    if (auth && isOnline) {
+    if (!auth || !isOnline) return;
+
+    const checkStatus = () => {
       api.get('/auth/premium-status')
         .then(res => {
+          // If subscription/trial has expired, force logout immediately
+          if (res.data.isPremiumActive === false) {
+            localStorage.removeItem('tailor_auth');
+            setAuth(null);
+            toast.error('🔒 Free trial has expired! Please log in to renew your subscription.', { duration: 5000 });
+            return;
+          }
+
           const updated = { 
             ...auth, 
             isPremiumActive: res.data.isPremiumActive, 
@@ -75,7 +85,6 @@ export default function App() {
             created_at: res.data.created_at || auth.created_at,
             subscription_expires_at: res.data.subscription_expires_at || auth.subscription_expires_at
           };
-          // Only update state and localstorage if something changed to avoid infinite renders
           const changed =
             auth.isPremiumActive !== updated.isPremiumActive ||
             auth.subscription_type !== updated.subscription_type ||
@@ -88,14 +97,20 @@ export default function App() {
         })
         .catch(err => {
           console.error('Failed to sync premium status:', err);
-          // If the server says the shop doesn't exist (404), force logout
           if (err.response && err.response.status === 404) {
             localStorage.removeItem('tailor_auth');
             setAuth(null);
             toast.error('Session expired or shop account deleted. Please log in again.');
           }
         });
-    }
+    };
+
+    // Run check immediately on load
+    checkStatus();
+
+    // Periodically check every 10 seconds to auto-detect trial expiry while logged in
+    const interval = setInterval(checkStatus, 10000);
+    return () => clearInterval(interval);
   }, [auth?.tenant_id, isOnline]);
 
   const isAdmin = auth?.role === 'Admin';

@@ -91,10 +91,10 @@ router.post('/register', async (req, res) => {
             tenantId = `${tenantId}-${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        // Insert new tenant shop with initial 30 days free trial expiration
+        // Insert new tenant shop with initial 1 minute free trial expiration (for testing expiry logout)
         await db.execute({
             sql: `INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo, subscription_expires_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+30 days', 'localtime'))`,
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+1 minute', 'localtime'))`,
             args: [tenantId, shop_name, address || '', phone_number, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null]
         });
 
