@@ -209,7 +209,8 @@ router.post('/login', async (req, res) => {
                 shop_logo: tenant.shop_logo || '',
                 isPremiumActive: isPremium,
                 subscription_type: tenant.subscription_type || 'Free',
-                created_at: tenant.created_at || null
+                created_at: tenant.created_at || null,
+                subscription_expires_at: tenant.subscription_expires_at || null
             });
         }
 

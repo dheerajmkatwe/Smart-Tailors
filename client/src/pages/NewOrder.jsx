@@ -795,10 +795,6 @@ export default function NewOrder({ onMenuClick, auth }) {
                 customer_id: customerId,
                 customer: !customerId ? { name: customer.name, phone_number: customer.phone_number } : undefined,
                 measurements: Object.keys(measPayload).length > 0 ? measPayload : undefined,
-                has_embroidery: hasEmbroidery,
-                embroidery_worker: embroideryWorker,
-                embroidery_cost: embroideryCost,
-                embroidery: hasEmbroidery ? embroidery : undefined,
                 images: images.length > 0 ? images : undefined,
                 audio_data: audioData,
                 recordingTime: audioBlob ? recordingTime : undefined

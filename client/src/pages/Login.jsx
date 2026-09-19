@@ -362,25 +362,16 @@ export default function Login({ setAuth }) {
                                 </div>
                             </div>
 
-                            {/* Activation Action Button */}
-                            <button
-                                type="button"
-                                className="login-btn-primary"
-                                onClick={handleRenewSubscription}
-                                disabled={renewing}
-                                style={{ marginBottom: 12 }}
-                            >
-                                {renewing ? (
-                                    <>
-                                        <span style={{ width: 16, height: 16, border: '2px solid rgba(42,7,9,0.3)', borderTop: '2px solid #2a0709', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                                        Activating Subscription...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle size={18} /> I Have Paid ₹{expiredData.amount} — Activate Now
-                                    </>
-                                )}
-                            </button>
+                            {/* Activation Action — only after Razorpay verified */}
+                            <div style={{
+                                background: 'rgba(212,175,55,0.06)', border: '1px dashed rgba(212,175,55,0.25)',
+                                borderRadius: 10, padding: '12px 14px', textAlign: 'center', marginBottom: 12
+                            }}>
+                                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0, lineHeight: 1.5 }}>
+                                    🔐 Please complete payment via the <strong style={{ color: '#38bdf8' }}>Razorpay button above</strong> or scan the QR code.<br />
+                                    Your account will be <strong style={{ color: '#4ade80' }}>automatically activated</strong> after successful payment verification.
+                                </p>
+                            </div>
 
                             <button
                                 type="button"
