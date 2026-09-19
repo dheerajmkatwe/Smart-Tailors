@@ -11,7 +11,7 @@ import CalendarView from '../components/CalendarView';
 import KpiOverviewModal from '../components/KpiOverviewModal';
 
 /* ─── Free Trial Pill (compact topbar badge) ───────────────────────────── */
-const TRIAL_DURATION_MS = 2 * 60 * 1000; // 2 minutes (for testing trial expiry)
+const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days full trial access
 
 // Inject keyframes once
 if (typeof document !== 'undefined' && !document.getElementById('sub-banner-styles')) {
@@ -24,11 +24,24 @@ if (typeof document !== 'undefined' && !document.getElementById('sub-banner-styl
     document.head.appendChild(s);
 }
 
+function normalizeIsoDate(dateStr) {
+    if (!dateStr) return null;
+    let s = String(dateStr).trim();
+    if (s.includes(' ') && !s.includes('T')) {
+        s = s.replace(' ', 'T');
+    }
+    if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) {
+        s = s + 'Z';
+    }
+    return s;
+}
+
 function getTimeLeftFromExpiry(expiresAt) {
     if (!expiresAt) return null;
-    const end  = new Date(expiresAt).getTime();
+    const normalized = normalizeIsoDate(expiresAt);
+    const end  = new Date(normalized).getTime();
     const diff = end - Date.now();
-    if (diff <= 0) return null;
+    if (isNaN(diff) || diff <= 0) return null;
     const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -41,7 +54,7 @@ function resolveExpiresAt(auth) {
         return auth.subscription_expires_at;
     }
     if (auth?.created_at) {
-        const t = new Date(auth.created_at).getTime() + TRIAL_DURATION_MS;
+        const t = new Date(normalizeIsoDate(auth.created_at) || auth.created_at).getTime() + TRIAL_DURATION_MS;
         return new Date(t).toISOString();
     }
     return new Date(Date.now() + TRIAL_DURATION_MS).toISOString();

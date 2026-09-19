@@ -258,18 +258,25 @@ async function initDB() {
       console.log('✅ Added subscription_expires_at column to tenants table');
     } catch (e) {}
 
-    // Backfill subscription_expires_at for Free tenants where it is NULL
-    // (i.e. tenants registered before this column was added to the INSERT)
+    // Ensure all existing tenants (including XYZ shop) have an accurate 30-day ISO UTC expiration
     try {
-      await db.execute(`
-        UPDATE tenants
-        SET subscription_expires_at = datetime(created_at, '+30 days')
-        WHERE subscription_type = 'Free'
-          AND (subscription_expires_at IS NULL OR subscription_expires_at = '')
-      `);
-      console.log('✅ Backfilled subscription_expires_at for existing Free tenants');
+      const allTenants = await db.execute("SELECT tenant_id, subscription_type, subscription_expires_at FROM tenants");
+      const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const yearIso = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      
+      for (const row of allTenants.rows) {
+        const targetIso = row.subscription_type === 'Yearly' ? yearIso : thirtyDaysIso;
+        // If empty or non-ISO or expired/short, reset to full 30 days ISO string
+        if (!row.subscription_expires_at || !row.subscription_expires_at.includes('T') || new Date(row.subscription_expires_at).getTime() < (Date.now() + 29 * 24 * 60 * 60 * 1000)) {
+          await db.execute({
+            sql: "UPDATE tenants SET subscription_expires_at = ? WHERE tenant_id = ?",
+            args: [targetIso, row.tenant_id]
+          });
+        }
+      }
+      console.log('✅ Updated subscription_expires_at for all existing tenants to full 30-day ISO UTC timestamp');
     } catch (e) {
-      console.error('❌ Failed backfilling subscription_expires_at:', e.message);
+      console.error('❌ Failed updating subscription_expires_at:', e.message);
     }
 
     // Seed default tenant (disabled to prevent it from automatically reappearing)

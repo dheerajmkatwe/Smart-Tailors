@@ -92,11 +92,12 @@ router.post('/register', async (req, res) => {
             tenantId = `${tenantId}-${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        // Insert new tenant shop with initial 2 minutes free trial expiration (for testing expiry logout)
+        // Insert new tenant shop with initial 30 days free trial expiration (ISO UTC format)
+        const initialExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         await db.execute({
             sql: `INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo, subscription_expires_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+2 minutes', 'localtime'))`,
-            args: [tenantId, shop_name, address || '', phone_number, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null]
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [tenantId, shop_name, address || '', phone_number, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null, initialExpiresAt]
         });
 
         res.status(201).json({
@@ -1033,14 +1034,15 @@ router.post('/razorpay-verify-payment', async (req, res) => {
         }
 
         const subscriptionType = plan === 'yearly' ? 'Yearly' : 'Monthly';
-        const durationModifier = plan === 'yearly' ? '+365 days' : '+30 days';
+        const subDays = plan === 'yearly' ? 365 : 30;
+        const subExpiresAt = new Date(Date.now() + subDays * 24 * 60 * 60 * 1000).toISOString();
 
         await db.execute({
             sql: `UPDATE tenants 
                   SET subscription_type = ?,
-                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime')
+                      subscription_expires_at = ?
                   WHERE tenant_id = ?`,
-            args: [subscriptionType, req.tenantId]
+            args: [subscriptionType, subExpiresAt, req.tenantId]
         });
 
         res.json({
@@ -1150,17 +1152,19 @@ router.post('/renew-subscription', async (req, res) => {
             targetPlan = tenant.subscription_type === 'Free' ? 'Monthly' : 'Yearly';
         }
 
-        const durationModifier = targetPlan === 'Yearly' ? '+365 days' : '+30 days';
+        const subDays = targetPlan === 'Yearly' ? 365 : 30;
+        const subExpiresAt = new Date(Date.now() + subDays * 24 * 60 * 60 * 1000).toISOString();
+        const nowIso = new Date().toISOString();
 
         await db.execute({
             sql: `UPDATE tenants 
                   SET subscription_type = ?,
-                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime'),
-                      created_at = datetime('now', 'localtime'),
+                      subscription_expires_at = ?,
+                      created_at = ?,
                       pending_request_type = NULL,
                       pending_request_date = NULL
                   WHERE tenant_id = ?`,
-            args: [targetPlan, tenant.tenant_id]
+            args: [targetPlan, subExpiresAt, nowIso, tenant.tenant_id]
         });
 
         console.log(`✅ Subscription renewed for shop "${tenant.shop_name}" (${tenant.tenant_id}) -> Plan: ${targetPlan} (${durationModifier})`);
@@ -1243,17 +1247,19 @@ router.post('/razorpay-verify-subscription-payment', async (req, res) => {
         }
 
         const targetPlan = plan || 'Monthly';
-        const durationModifier = targetPlan === 'Yearly' ? '+365 days' : '+30 days';
+        const subDays = targetPlan === 'Yearly' ? 365 : 30;
+        const subExpiresAt = new Date(Date.now() + subDays * 24 * 60 * 60 * 1000).toISOString();
+        const nowIso = new Date().toISOString();
 
         await db.execute({
             sql: `UPDATE tenants 
                   SET subscription_type = ?,
-                      subscription_expires_at = datetime('now', '${durationModifier}', 'localtime'),
-                      created_at = datetime('now', 'localtime'),
+                      subscription_expires_at = ?,
+                      created_at = ?,
                       pending_request_type = NULL,
                       pending_request_date = NULL
                   WHERE tenant_id = ?`,
-            args: [targetPlan, tenant_id]
+            args: [targetPlan, subExpiresAt, nowIso, tenant_id]
         });
 
         console.log(`✅ Razorpay payment verified & subscription active for shop (${tenant_id}) -> Plan: ${targetPlan}`);
