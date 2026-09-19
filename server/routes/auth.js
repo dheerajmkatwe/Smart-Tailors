@@ -980,10 +980,10 @@ router.delete('/super-admin/blocked-numbers/:phone_number', async (req, res) => 
 });
 
 // POST /api/auth/super-admin/set-trial-duration
-// Set or decrease trial duration for a specific boutique user (e.g., 2 mins, 5 mins, 10 mins, etc.)
+// Set or decrease trial duration for a specific boutique user (supports Free Trial & ₹1 Monthly Trial)
 router.post('/super-admin/set-trial-duration', async (req, res) => {
     try {
-        const { tenant_id, duration_minutes } = req.body;
+        const { tenant_id, duration_minutes, target_plan } = req.body;
         if (!tenant_id || duration_minutes === undefined || duration_minutes === null) {
             return res.status(400).json({ error: 'tenant_id and duration_minutes are required.' });
         }
@@ -1003,6 +1003,9 @@ router.post('/super-admin/set-trial-duration', async (req, res) => {
         }
 
         const tenant = tenantRs.rows[0];
+        const plan = (target_plan && ['Free', 'Monthly', 'Yearly'].includes(target_plan))
+            ? target_plan
+            : (tenant.subscription_type || 'Free');
 
         // Calculate new expiration ISO timestamp from current server time
         const newExpiresAt = new Date(Date.now() + mins * 60 * 1000).toISOString();
@@ -1010,19 +1013,19 @@ router.post('/super-admin/set-trial-duration', async (req, res) => {
         await db.execute({
             sql: `UPDATE tenants 
                   SET subscription_expires_at = ?,
-                      subscription_type = 'Free'
+                      subscription_type = ?
                   WHERE tenant_id = ?`,
-            args: [newExpiresAt, tenant_id]
+            args: [newExpiresAt, plan, tenant_id]
         });
 
-        console.log(`⏱️ Super Admin set custom trial duration for shop "${tenant.shop_name}" (${tenant_id}) -> ${mins} minutes (Expires: ${newExpiresAt})`);
+        console.log(`⏱️ Super Admin set custom trial duration for shop "${tenant.shop_name}" (${tenant_id}) -> ${mins} minutes (Plan: ${plan}, Expires: ${newExpiresAt})`);
 
         res.json({
             success: true,
-            message: `🎉 Trial duration updated to ${mins} minute(s) for "${tenant.shop_name}".`,
+            message: `🎉 Trial duration updated to ${mins} minute(s) [Plan: ${plan}] for "${tenant.shop_name}".`,
             tenant_id,
             subscription_expires_at: newExpiresAt,
-            subscription_type: 'Free'
+            subscription_type: plan
         });
     } catch (err) {
         console.error('Error updating custom trial duration:', err.message);

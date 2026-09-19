@@ -7,6 +7,7 @@ import api from '../api/axios';
 function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
     const [now, setNow] = useState(Date.now());
     const [customMins, setCustomMins] = useState('');
+    const [targetPlan, setTargetPlan] = useState(() => tenant?.subscription_type === 'Monthly' ? 'Monthly' : 'Free');
     const [updatingTrial, setUpdatingTrial] = useState(false);
 
     useEffect(() => {
@@ -16,7 +17,7 @@ function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
 
     if (!tenant) return null;
 
-    const handleSetTrial = async (mins) => {
+    const handleSetTrial = async (mins, selectedPlan = targetPlan) => {
         if (!mins || mins <= 0) {
             toast.error('Please enter a valid duration in minutes.');
             return;
@@ -25,14 +26,15 @@ function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
         try {
             const res = await api.post('/auth/super-admin/set-trial-duration', {
                 tenant_id: tenant.tenant_id,
-                duration_minutes: mins
+                duration_minutes: mins,
+                target_plan: selectedPlan
             });
-            toast.success(res.data.message || `Trial set to ${mins} minute(s)`);
+            toast.success(res.data.message || `Trial set to ${mins} minute(s) [${selectedPlan}]`);
             if (onUpdateTenant) {
                 onUpdateTenant({
                     ...tenant,
                     subscription_expires_at: res.data.subscription_expires_at,
-                    subscription_type: 'Free'
+                    subscription_type: res.data.subscription_type || selectedPlan
                 });
             }
             setCustomMins('');
@@ -202,9 +204,43 @@ function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
                     <div style={{ fontSize: 12, color: '#f87171', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Calendar size={14} /> Decrease / Set Custom Trial Duration
                     </div>
-                    <p style={{ fontSize: 11.5, color: '#aaa', margin: '0 0 14px 0', lineHeight: 1.4 }}>
-                        Instantly set remaining trial duration for <strong>{tenant.shop_name}</strong>. Once elapsed, the account will be automatically logged out and asked for payment.
+                    <p style={{ fontSize: 11.5, color: '#aaa', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                        Instantly set trial duration for <strong>{tenant.shop_name}</strong>. Select trial stage below, then choose a preset or enter custom minutes.
                     </p>
+
+                    {/* Target Trial Stage Radio Selector */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                        <button
+                            type="button"
+                            onClick={() => setTargetPlan('Free')}
+                            style={{
+                                flex: 1, padding: '8px 12px', borderRadius: 8,
+                                border: targetPlan === 'Free' ? '2px solid #38bdf8' : '1px solid #28283e',
+                                background: targetPlan === 'Free' ? 'rgba(56,189,248,0.12)' : '#12121e',
+                                color: targetPlan === 'Free' ? '#38bdf8' : '#8888a0',
+                                fontSize: 11.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s',
+                                textAlign: 'left'
+                            }}
+                        >
+                            🎁 1st Month Free Trial
+                            <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Asks ₹1 on expiry</div>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTargetPlan('Monthly')}
+                            style={{
+                                flex: 1, padding: '8px 12px', borderRadius: 8,
+                                border: targetPlan === 'Monthly' ? '2px solid #fb923c' : '1px solid #28283e',
+                                background: targetPlan === 'Monthly' ? 'rgba(251,146,60,0.12)' : '#12121e',
+                                color: targetPlan === 'Monthly' ? '#fb923c' : '#8888a0',
+                                fontSize: 11.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s',
+                                textAlign: 'left'
+                            }}
+                        >
+                            💳 ₹1 Paid Trial (Monthly)
+                            <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Asks ₹9,999 Annual on expiry</div>
+                        </button>
+                    </div>
 
                     {/* Quick Presets */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
@@ -257,7 +293,7 @@ function ShopOverviewModal({ tenant, onClose, onUpdateTenant }) {
                                 cursor: 'pointer', transition: 'all 0.2s', opacity: (updatingTrial || !customMins) ? 0.6 : 1
                             }}
                         >
-                            {updatingTrial ? 'Setting...' : 'Set Trial'}
+                            {updatingTrial ? 'Setting...' : `Set ${targetPlan} Trial`}
                         </button>
                     </div>
                 </div>
