@@ -23,7 +23,8 @@ async function getRazorpayClient(tenantId = null) {
         }
     }
 
-    keyId = keyId || 'rzp_test_5dd75929b23048';
+    keyId = keyId || 'rzp_live_Tdy6KkdIdRN0hJ';
+    keySecret = keySecret || 'CHVoRAJD4dk2g8LhKOtPdar8';
 
     if (keyId && keySecret) {
         try {
