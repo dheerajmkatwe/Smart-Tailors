@@ -117,6 +117,7 @@ export default function NewOrder({ onMenuClick, auth }) {
     const [bookingDate, setBookingDate] = useState(today);
     const [deliveryDate, setDeliveryDate] = useState(initialDraft?.deliveryDate || '');
     const [advancePaid, setAdvancePaid] = useState(initialDraft?.advancePaid || '');
+    const [discount, setDiscount] = useState(initialDraft?.discount || '');
     const [paymentMethod, setPaymentMethod] = useState(initialDraft?.paymentMethod || 'Cash');
     const [assignedWorker, setAssignedWorker] = useState(initialDraft?.assignedWorker || '');
     const [workers, setWorkers] = useState([]);
@@ -127,6 +128,33 @@ export default function NewOrder({ onMenuClick, auth }) {
     const [showMockRazorpay, setShowMockRazorpay] = useState(false);
     const [mockRazorpayAmount, setMockRazorpayAmount] = useState(0);
     const [mockOrderId, setMockOrderId] = useState('');
+
+    const [inlineUpi, setInlineUpi] = useState('');
+    const [savingInlineUpi, setSavingInlineUpi] = useState(false);
+    const [shopUpiState, setShopUpiState] = useState('');
+
+    const handleSaveInlineUpi = async () => {
+        if (!inlineUpi.trim()) {
+            toast.error('Please enter a valid UPI ID (e.g. 9876543210@ybl)');
+            return;
+        }
+        setSavingInlineUpi(true);
+        try {
+            const activeAuth = auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}');
+            await api.put('/auth/profile', {
+                ...activeAuth,
+                upi_id: inlineUpi.trim()
+            });
+            activeAuth.upi_id = inlineUpi.trim();
+            localStorage.setItem('tailor_auth', JSON.stringify(activeAuth));
+            setShopUpiState(inlineUpi.trim());
+            toast.success('UPI ID saved! Live QR code generated.');
+        } catch (err) {
+            toast.error('Failed to save UPI ID');
+        } finally {
+            setSavingInlineUpi(false);
+        }
+    };
 
     useEffect(() => {
         setIsAdvanceVerified(false);
@@ -503,14 +531,16 @@ export default function NewOrder({ onMenuClick, auth }) {
     }, [customer, customerId, customerFound, bookingDate, deliveryDate, assignedWorker, measurementType, activeTab, measurements, extraMeasurements, services, images, advancePaid, paymentMethod]);
 
     // ── Computed totals ───────────────────────────────
-    const totalAmount = services.reduce((s, svc) => {
+    const rawTotalAmount = services.reduce((s, svc) => {
         const qty = parseFloat(svc.quantity) || 0;
         const price = parseFloat(svc.price) || 0;
         return s + qty * price;
     }, 0);
 
+    const discountAmount = parseFloat(discount) || 0;
+    const totalAmount = Math.max(0, rawTotalAmount - discountAmount);
     const advance = parseFloat(advancePaid) || 0;
-    const balance = totalAmount - advance;
+    const balance = Math.max(0, totalAmount - advance);
 
     // ── Customer lookup ───────────────────────────────
     async function handlePhoneSearch(isAuto = false) {
@@ -742,11 +772,17 @@ export default function NewOrder({ onMenuClick, auth }) {
         const activePaymentId = customPaymentId || verifiedPayId;
         const activeVerified = isAdvanceVerified || !!customPaymentId;
 
+        let notesWithDiscount = customer.notes || '';
+        if (discountAmount > 0) {
+            notesWithDiscount = (notesWithDiscount ? notesWithDiscount + ' | ' : '') + `Discount: ₹${discountAmount.toFixed(2)}`;
+        }
+
         const orderPayload = {
             booking_date: bookingDate,
             delivery_date: deliveryDate,
             advance_paid: advance,
-            notes: customer.notes || '',
+            discount: discountAmount,
+            notes: notesWithDiscount,
             measurement_type: measurementType,
             services: svcList,
             assigned_worker: assignedWorker,
@@ -1320,21 +1356,39 @@ export default function NewOrder({ onMenuClick, auth }) {
                         <div className="card-body">
                             <div className="grid-2">
                                 <div>
-                                    <div className="form-group">
-                                        <label className="form-label">Advance Paid (₹)</label>
-                                        <div className="input-prefix">
-                                            <span className="prefix-symbol">₹</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max={totalAmount}
-                                                step="0.01"
-                                                value={advancePaid}
-                                                onChange={e => setAdvancePaid(e.target.value)}
-                                                placeholder="0.00"
-                                            />
+                                    <div className="grid-2" style={{ gap: '12px' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Discount Amount (₹)</label>
+                                            <div className="input-prefix">
+                                                <span className="prefix-symbol">₹</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={rawTotalAmount}
+                                                    step="0.01"
+                                                    value={discount}
+                                                    onChange={e => setDiscount(e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Advance Paid (₹)</label>
+                                            <div className="input-prefix">
+                                                <span className="prefix-symbol">₹</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={totalAmount}
+                                                    step="0.01"
+                                                    value={advancePaid}
+                                                    onChange={e => setAdvancePaid(e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
+                                    
                                     <div className="form-group mt-16">
                                         <label className="form-label">Payment Method</label>
                                         <select
@@ -1343,110 +1397,149 @@ export default function NewOrder({ onMenuClick, auth }) {
                                             onChange={e => setPaymentMethod(e.target.value)}
                                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px' }}
                                         >
-                                            <option value="Cash">Cash</option>
-                                            <option value="PhonePe">PhonePe</option>
+                                            <option value="Cash">💵 Cash</option>
+                                            <option value="UPI / Dynamic QR Code">📱 UPI / Dynamic QR Code</option>
+                                            <option value="PhonePe">🟣 PhonePe</option>
+                                            <option value="Google Pay">🔵 Google Pay</option>
+                                            <option value="Paytm">🟦 Paytm</option>
+                                            <option value="Card">💳 Card / POS Machine</option>
+                                            <option value="Net Banking">🏦 Net Banking</option>
                                         </select>
                                     </div>
-                                    {/* Assigned worker is silently auto-set to the first registered worker — no manual selection */}
-                                         {paymentMethod === 'PhonePe' && advance > 0 && (() => {
-                                            const activeAuth = auth || JSON.parse(localStorage.getItem('tailor_auth')) || {};
-                                            const shopUpi = activeAuth.upi_id;
-                                            const shopName = activeAuth.shop_name || 'SMART TAILOR';
-                                            const shopGst = activeAuth.gst_id;
-                                            
-                                            if (services.length === 0 || totalAmount <= 0) {
-                                                return (
-                                                    <div style={{ marginTop: '16px', padding: '12px 14px', background: 'rgba(211,47,47,0.05)', border: '1px dashed #d32f2f', borderRadius: '8px', color: '#c62828', fontSize: '11.5px', textAlign: 'center', fontWeight: '500' }}>
-                                                        ⚠️ Please add stitching services first before scanning for advance payment.
-                                                    </div>
-                                                );
-                                            }
 
-                                            if (advance > totalAmount) {
-                                                return (
-                                                    <div style={{ marginTop: '16px', padding: '12px 14px', background: 'rgba(211,47,47,0.05)', border: '1px dashed #d32f2f', borderRadius: '8px', color: '#c62828', fontSize: '11.5px', textAlign: 'center', fontWeight: '500' }}>
-                                                        ⚠️ Advance amount cannot exceed the Total Amount (₹{totalAmount.toFixed(2)}).
-                                                    </div>
-                                                );
-                                            }
-
-                                            if (shopGst && shopGst.trim()) {
-                                                // GST Registered Shop: Razorpay Secure Checkout
-                                                return (
-                                                    <div style={{ width: '100%' }}>
-                                                        {isAdvanceVerified ? (
-                                                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(46,125,50,0.04)', border: '1px solid rgba(46,125,50,0.15)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-                                                                <span style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                                                                    ✓ Advance Payment Verified via Razorpay ⚡
-                                                                </span>
-                                                                <span style={{ fontSize: '11px', color: 'var(--gray)', marginTop: '4px' }}>
-                                                                    Payment ID: <strong>{verifiedPayId}</strong>
-                                                                </span>
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(212,175,55,0.03)', border: '1px dashed #d4af37', padding: '16px', borderRadius: '8px', textAlign: 'center', width: '100%' }}>
-                                                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--maroon-dark)', marginBottom: '4px' }}>
-                                                                    GST Registered Shop (Razorpay Secure Gateway Active)
-                                                                </div>
-                                                                <p style={{ fontSize: '11.5px', color: 'var(--gray)', margin: '0 0 12px 0', lineHeight: '1.4' }}>
-                                                                    Collect customer advance of ₹{advance.toFixed(2)} securely via card, wallet, netbanking, or UPI.
-                                                                </p>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRazorpayAdvance(advance)}
-                                                                    disabled={processingRazorpay}
-                                                                    className="btn btn-secondary"
-                                                                    style={{
-                                                                        padding: '10px 18px', borderRadius: '8px',
-                                                                        background: 'linear-gradient(135deg, #6A1E2E 0%, #4A101C 100%)',
-                                                                        color: '#fff', border: 'none', fontWeight: 'bold', fontSize: '13px',
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                                                        boxShadow: '0 4px 10px rgba(106,30,46,0.15)', cursor: 'pointer', width: '100%'
-                                                                    }}
-                                                                >
-                                                                    {processingRazorpay ? 'Processing...' : `Pay Advance ₹${advance.toFixed(2)} via Razorpay`}
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            }
-                                            
-                                            if (!shopUpi || !shopUpi.trim()) {
-                                                return (
-                                                    <div style={{ marginTop: '16px', padding: '14px', background: 'rgba(106,30,46,0.04)', border: '1px dashed var(--maroon)', borderRadius: '8px', textAlign: 'center' }}>
-                                                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--maroon-dark)', marginBottom: '4px' }}>
-                                                            ⚠️ UPI Configuration Required
-                                                        </div>
-                                                        <div style={{ fontSize: '11px', color: 'var(--gray)', lineHeight: '1.4' }}>
-                                                            Please configure your boutique's UPI ID in Boutique Settings first to enable scan-to-pay QR codes.
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-
+                                    {/* Dynamic QR Code or Inline UPI setup for UPI payment methods */}
+                                    {['UPI / Dynamic QR Code', 'PhonePe', 'Google Pay', 'Paytm'].includes(paymentMethod) && (() => {
+                                        const activeAuth = auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}');
+                                        const shopUpi = shopUpiState || activeAuth.upi_id;
+                                        const shopName = activeAuth.shop_name || 'SMART TAILOR';
+                                        const shopGst = activeAuth.gst_id;
+                                        const qrAmount = advance > 0 ? advance : totalAmount;
+                                        
+                                        if (services.length === 0 || totalAmount <= 0) {
                                             return (
-                                                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', padding: '16px', borderRadius: '8px', border: '1px solid var(--gray-light)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--maroon)', marginBottom: 8, textAlign: 'center' }}>
-                                                        Scan to Pay Advance: {`\u20b9${advance.toFixed(2)}`}
+                                                <div style={{ marginTop: '16px', padding: '12px 14px', background: 'rgba(211,47,47,0.05)', border: '1px dashed #d32f2f', borderRadius: '8px', color: '#c62828', fontSize: '11.5px', textAlign: 'center', fontWeight: '500' }}>
+                                                    ⚠️ Please add stitching services first before scanning for payment.
+                                                </div>
+                                            );
+                                        }
+
+                                        if (advance > totalAmount) {
+                                            return (
+                                                <div style={{ marginTop: '16px', padding: '12px 14px', background: 'rgba(211,47,47,0.05)', border: '1px dashed #d32f2f', borderRadius: '8px', color: '#c62828', fontSize: '11.5px', textAlign: 'center', fontWeight: '500' }}>
+                                                    ⚠️ Advance amount cannot exceed the Total Amount (₹{totalAmount.toFixed(2)}).
+                                                </div>
+                                            );
+                                        }
+
+                                        if (shopGst && shopGst.trim()) {
+                                            // GST Registered Shop: Razorpay Secure Checkout
+                                            return (
+                                                <div style={{ width: '100%' }}>
+                                                    {isAdvanceVerified ? (
+                                                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(46,125,50,0.04)', border: '1px solid rgba(46,125,50,0.15)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+                                                            <span style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                                                                ✓ Payment Verified via Razorpay ⚡
+                                                            </span>
+                                                            <span style={{ fontSize: '11px', color: 'var(--gray)', marginTop: '4px' }}>
+                                                                Payment ID: <strong>{verifiedPayId}</strong>
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(212,175,55,0.03)', border: '1px dashed #d4af37', padding: '16px', borderRadius: '8px', textAlign: 'center', width: '100%' }}>
+                                                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--maroon-dark)', marginBottom: '4px' }}>
+                                                                GST Registered Shop (Razorpay Gateway Active)
+                                                            </div>
+                                                            <p style={{ fontSize: '11.5px', color: 'var(--gray)', margin: '0 0 12px 0', lineHeight: '1.4' }}>
+                                                                Collect customer payment of ₹{qrAmount.toFixed(2)} securely via card, wallet, netbanking, or UPI.
+                                                            </p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRazorpayAdvance(qrAmount)}
+                                                                disabled={processingRazorpay}
+                                                                className="btn btn-secondary"
+                                                                style={{
+                                                                    padding: '10px 18px', borderRadius: '8px',
+                                                                    background: 'linear-gradient(135deg, #6A1E2E 0%, #4A101C 100%)',
+                                                                    color: '#fff', border: 'none', fontWeight: 'bold', fontSize: '13px',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                                                    boxShadow: '0 4px 10px rgba(106,30,46,0.15)', cursor: 'pointer', width: '100%'
+                                                                }}
+                                                            >
+                                                                {processingRazorpay ? 'Processing...' : `Pay ₹${qrAmount.toFixed(2)} via Razorpay`}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        if (!shopUpi || !shopUpi.trim()) {
+                                            return (
+                                                <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(106,30,46,0.04)', border: '1px dashed var(--maroon)', borderRadius: '10px', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--maroon-dark)', marginBottom: '4px' }}>
+                                                        ⚡ Quick Setup: Enter Boutique UPI ID
                                                     </div>
-                                                    <QRCode 
-                                                        value={`upi://pay?pa=${shopUpi.trim()}&pn=${encodeURIComponent(shopName)}&am=${advance.toFixed(2)}&cu=INR`} 
-                                                        size={120} 
-                                                        level="L" 
-                                                    />
-                                                    <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8, textAlign: 'center' }}>
-                                                        Scan with PhonePe, GPay, or Paytm
+                                                    <p style={{ fontSize: '11.5px', color: 'var(--gray)', margin: '0 0 12px 0', lineHeight: '1.4' }}>
+                                                        Enter your UPI ID below once to generate instant scan-to-pay QR codes directly on your screen &amp; bills!
+                                                    </p>
+                                                    <div style={{ display: 'flex', gap: '8px', maxWidth: '380px', margin: '0 auto' }}>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="e.g. 9876543210@ybl or shop@upi" 
+                                                            value={inlineUpi} 
+                                                            onChange={(e) => setInlineUpi(e.target.value)} 
+                                                            className="form-input" 
+                                                            style={{ fontSize: '12.5px', flex: 1, padding: '8px 12px' }}
+                                                        />
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={handleSaveInlineUpi} 
+                                                            disabled={savingInlineUpi}
+                                                            className="btn btn-primary"
+                                                            style={{ padding: '8px 14px', fontSize: '12px', whiteSpace: 'nowrap', background: 'var(--gold)', color: '#4A101C', fontWeight: 'bold' }}
+                                                        >
+                                                            {savingInlineUpi ? 'Saving...' : '⚡ Save & Generate QR'}
+                                                        </button>
                                                     </div>
                                                 </div>
                                             );
-                                        })()}
+                                        }
+
+                                        return (
+                                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid rgba(198,167,94,0.3)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--maroon-dark)', marginBottom: 8, textAlign: 'center' }}>
+                                                    Scan to Pay Amount: <span style={{ color: '#2E7D32' }}>{`\u20b9${qrAmount.toFixed(2)}`}</span>
+                                                </div>
+                                                <QRCode 
+                                                    value={`upi://pay?pa=${shopUpi.trim()}&pn=${encodeURIComponent(shopName)}&am=${qrAmount.toFixed(2)}&cu=INR`} 
+                                                    size={130} 
+                                                    level="L" 
+                                                />
+                                                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 8, textAlign: 'center', fontWeight: 500 }}>
+                                                    Scan with PhonePe, GPay, Paytm, or BHIM UPI
+                                                </div>
+                                                <div style={{ fontSize: 10, color: 'var(--maroon)', marginTop: 2, textAlign: 'center' }}>
+                                                    UPI ID: <strong>{shopUpi.trim()}</strong>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 <div>
                                     <div style={{ background: 'var(--ivory)', borderRadius: 10, padding: '16px 20px', border: '1px solid var(--gray-light)' }}>
                                         <div className="flex-between" style={{ padding: '6px 0', borderBottom: '1px solid var(--gray-light)' }}>
-                                            <span style={{ color: 'var(--gray)', fontSize: 13 }}>Total Amount</span>
-                                            <strong style={{ fontSize: 15 }}>₹{totalAmount.toFixed(2)}</strong>
+                                            <span style={{ color: 'var(--gray)', fontSize: 13 }}>Subtotal</span>
+                                            <strong style={{ fontSize: 14, color: 'var(--maroon-dark)' }}>₹{rawTotalAmount.toFixed(2)}</strong>
+                                        </div>
+                                        {discountAmount > 0 && (
+                                            <div className="flex-between" style={{ padding: '6px 0', borderBottom: '1px solid var(--gray-light)' }}>
+                                                <span style={{ color: 'var(--gray)', fontSize: 13 }}>Discount</span>
+                                                <span style={{ color: '#D32F2F', fontWeight: 600 }}>-₹{discountAmount.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex-between" style={{ padding: '6px 0', borderBottom: '1px solid var(--gray-light)' }}>
+                                            <span style={{ color: 'var(--gray)', fontSize: 13, fontWeight: 600 }}>Final Total Amount</span>
+                                            <strong style={{ fontSize: 16, color: 'var(--maroon-dark)' }}>₹{totalAmount.toFixed(2)}</strong>
                                         </div>
                                         <div className="flex-between" style={{ padding: '6px 0', borderBottom: '1px solid var(--gray-light)' }}>
                                             <span style={{ color: 'var(--gray)', fontSize: 13 }}>Advance Paid</span>

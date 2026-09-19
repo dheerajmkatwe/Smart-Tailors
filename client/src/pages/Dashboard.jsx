@@ -71,7 +71,6 @@ function FreeTrialPopup({ auth }) {
         const updateTimer = () => {
             const tl = getTimeLeftFromExpiry(expiresAt);
             setTimeLeft(tl);
-            // If expiresAt is set and diff <= 0, trial has expired!
             const normalized = normalizeIsoDate(expiresAt);
             const end = new Date(normalized).getTime();
             if (end - Date.now() <= 0) {
@@ -85,7 +84,7 @@ function FreeTrialPopup({ auth }) {
         return () => clearInterval(id);
     }, [expiresAt]);
 
-    if (!timeLeft) return null;
+    const activeLeft = timeLeft || { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
     const subType = auth?.subscription_type || 'Free';
     const isFree = subType === 'Free';
@@ -94,12 +93,12 @@ function FreeTrialPopup({ auth }) {
     const theme = isFree
         ? { accent: '#38bdf8', glow: 'rgba(56,189,248,0.4)', label: 'FREE TRIAL', sub: 'Time Remaining', darkBg: 'linear-gradient(135deg, #0c2233 0%, #0a1e2e 100%)' }
         : isMonthly
-            ? { accent: '#fb923c', glow: 'rgba(251,146,60,0.4)', label: '₹1 MONTHLY TRIAL', sub: '30-Day Access Active', darkBg: 'linear-gradient(135deg, #1f1208 0%, #160e06 100%)' }
+            ? { accent: '#fb923c', glow: 'rgba(251,146,60,0.4)', label: '₹1 MONTHLY TRIAL', sub: 'Trial Access Active', darkBg: 'linear-gradient(135deg, #1f1208 0%, #160e06 100%)' }
             : { accent: '#c084fc', glow: 'rgba(192,132,252,0.4)', label: '₹9,999 ANNUAL PLAN', sub: '365-Day Access Active', darkBg: 'linear-gradient(135deg, #1a0e24 0%, #130a1b 100%)' };
 
-    const urgency = timeLeft.days < 3;
+    const urgency = activeLeft.days < 3;
     const totalMs = isFree ? TRIAL_DURATION_MS : (isMonthly ? 30*24*60*60*1000 : 365*24*60*60*1000);
-    const remainMs = timeLeft.days*86400000 + timeLeft.hours*3600000 + timeLeft.minutes*60000 + timeLeft.seconds*1000;
+    const remainMs = activeLeft.days*86400000 + activeLeft.hours*3600000 + activeLeft.minutes*60000 + activeLeft.seconds*1000;
     const pct = Math.max(0, Math.min(100, (remainMs / totalMs) * 100));
 
     const digitBox = (val, label, red = false) => (
@@ -139,13 +138,13 @@ function FreeTrialPopup({ auth }) {
 
             {/* CENTER — digit countdown (seconds included for ALL plans) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center' }}>
-                {digitBox(timeLeft.days, 'Days')}
+                {digitBox(activeLeft.days, 'Days')}
                 {sep}
-                {digitBox(timeLeft.hours, 'Hours')}
+                {digitBox(activeLeft.hours, 'Hours')}
                 {sep}
-                {digitBox(timeLeft.minutes, 'Mins')}
+                {digitBox(activeLeft.minutes, 'Mins')}
                 {sep}
-                {digitBox(timeLeft.seconds, 'Secs', true)}
+                {digitBox(activeLeft.seconds, 'Secs', true)}
             </div>
 
             {/* RIGHT — progress bar + badge */}
@@ -154,7 +153,7 @@ function FreeTrialPopup({ auth }) {
                     <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}dd)`, borderRadius: 4, transition: 'width 1s linear', boxShadow: `0 0 6px ${theme.glow}` }} />
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 900, color: urgency ? '#ffffff' : theme.accent, background: urgency ? '#dc2626' : 'rgba(255,255,255,0.12)', border: `1.5px solid ${urgency ? '#ef4444' : theme.accent}`, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                    {urgency ? '⚠️ ' : ''}{timeLeft.days > 0 ? `${timeLeft.days}d ${timeLeft.hours}h left` : timeLeft.hours > 0 ? `${timeLeft.hours}h ${timeLeft.minutes}m left` : `${timeLeft.minutes}m ${timeLeft.seconds}s left`}
+                    {urgency ? '⚠️ ' : ''}{activeLeft.days > 0 ? `${activeLeft.days}d ${activeLeft.hours}h left` : activeLeft.hours > 0 ? `${activeLeft.hours}h ${activeLeft.minutes}m left` : `${activeLeft.minutes}m ${activeLeft.seconds}s left`}
                 </span>
             </div>
         </div>

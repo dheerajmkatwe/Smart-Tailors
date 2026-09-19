@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Store, User, Phone, MapPin, CreditCard, Landmark, Users, Plus, Trash2, Save, Scissors, Crown, Key, Gift, Calendar, Sparkles, AlertCircle, Edit, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
+import QRCode from 'react-qr-code';
 import api from '../api/axios';
 
 export default function BoutiqueSettings({ onMenuClick }) {
@@ -94,7 +95,13 @@ export default function BoutiqueSettings({ onMenuClick }) {
     };
 
     const handleProfileChange = (e) => {
-        setProfile({ ...profile, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'phone_number') {
+            const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+            setProfile(prev => ({ ...prev, phone_number: digitsOnly }));
+            return;
+        }
+        setProfile(prev => ({ ...prev, [name]: value }));
     };
 
     const saveProfile = async (e) => {
@@ -337,14 +344,17 @@ export default function BoutiqueSettings({ onMenuClick }) {
                         </div>
 
                         <div className="form-group mb-16">
-                            <label className="form-label">Shop Contact Number</label>
+                            <label className="form-label">Shop Contact Number (Printed on Invoices)</label>
                             <div className="input-prefix">
                                 <span className="prefix-symbol"><Phone size={16} /></span>
                                 <input
                                     type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     name="phone_number"
+                                    maxLength={10}
                                     className="form-input"
-                                    placeholder="Enter boutique phone number"
+                                    placeholder="10-digit Indian mobile number"
                                     value={profile.phone_number}
                                     onChange={handleProfileChange}
                                     style={{ border: 'none', background: 'transparent' }}
@@ -368,14 +378,14 @@ export default function BoutiqueSettings({ onMenuClick }) {
                             </div>
                         </div>
 
-                        <div className="form-group mb-24" style={{ background: 'rgba(198,167,94,0.04)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(198,167,94,0.15)', position: 'relative' }}>
+                        <div className="form-group mb-24" style={{ background: 'rgba(198,167,94,0.04)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(198,167,94,0.2)', position: 'relative' }}>
                             <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <label className="form-label" style={{ color: 'var(--maroon-dark)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-                                    Dynamic UPI ID (Scan to Pay)
+                                    <CreditCard size={16} style={{ color: 'var(--gold)' }} /> Dynamic UPI ID (Scan to Pay)
                                 </label>
                             </div>
-                            <p style={{ fontSize: '11px', color: 'var(--gray)', margin: '4px 0 8px' }}>
-                                Pre-populates exact balance amounts on customer bill PDF QR codes.
+                            <p style={{ fontSize: '11.5px', color: 'var(--gray)', margin: '4px 0 10px' }}>
+                                Dynamic QR codes will be generated automatically on your bills &amp; checkout screens for instant customer payments.
                             </p>
                             <div className="input-prefix" style={{ background: '#fff' }}>
                                 <span className="prefix-symbol"><CreditCard size={16} style={{ color: 'var(--gold)' }} /></span>
@@ -383,12 +393,29 @@ export default function BoutiqueSettings({ onMenuClick }) {
                                     type="text"
                                     name="upi_id"
                                     className="form-input"
-                                    placeholder="e.g. elegantcouture@okaxis"
+                                    placeholder="e.g. 9876543210@ybl or shop@upi"
                                     value={profile.upi_id || ''}
                                     onChange={handleProfileChange}
                                     style={{ border: 'none', background: 'transparent' }}
                                 />
                             </div>
+
+                            {/* Live Dynamic QR Code Preview */}
+                            {profile.upi_id && profile.upi_id.trim() && (
+                                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', padding: '14px', borderRadius: '10px', border: '1px solid rgba(198,167,94,0.3)' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--maroon-dark)', marginBottom: '8px' }}>
+                                        ⚡ Live Scan-to-Pay Dynamic QR Preview
+                                    </div>
+                                    <QRCode 
+                                        value={`upi://pay?pa=${profile.upi_id.trim()}&pn=${encodeURIComponent(profile.shop_name || 'Boutique')}&cu=INR`} 
+                                        size={110} 
+                                        level="L" 
+                                    />
+                                    <div style={{ fontSize: '10.5px', color: 'var(--gray)', marginTop: '6px' }}>
+                                        Active UPI ID: <strong style={{ color: 'var(--maroon)' }}>{profile.upi_id.trim()}</strong>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ borderTop: '1px solid var(--gray-light)', margin: '24px 0', paddingTop: '16px' }}>

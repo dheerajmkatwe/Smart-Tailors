@@ -70,8 +70,15 @@ export default function App() {
     const checkStatus = () => {
       api.get('/auth/premium-status')
         .then(res => {
-          const isExpired = res.data.isPremiumActive === false || 
-            (res.data.subscription_expires_at && new Date(res.data.subscription_expires_at).getTime() <= Date.now());
+          let expMs = 0;
+          if (res.data.subscription_expires_at) {
+            let s = String(res.data.subscription_expires_at).trim();
+            if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T');
+            if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-')) s += 'Z';
+            expMs = new Date(s).getTime();
+          }
+
+          const isExpired = res.data.isPremiumActive === false || (expMs > 0 && expMs <= Date.now());
 
           // If subscription/trial has expired, force logout immediately
           if (isExpired) {

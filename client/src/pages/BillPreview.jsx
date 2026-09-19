@@ -400,7 +400,7 @@ export default function BillPreview({ onMenuClick }) {
                                     {order.shop_address || ''}
                                 </p>
                                 <p style={{ fontSize: 11, color: 'rgba(198,167,94,0.7)', marginTop: 3 }}>
-                                    {order.shop_phone ? `Phone: ${order.shop_phone}` : ''}
+                                    {order.shop_phone ? `Phone: ${order.shop_phone}` : (auth?.phone_number ? `Phone: ${auth.phone_number}` : '')}
                                 </p>
                                 {order.shop_gst && (
                                     <p style={{ fontSize: 9, color: 'rgba(198,167,94,0.5)', marginTop: 3 }}>
@@ -555,7 +555,7 @@ export default function BillPreview({ onMenuClick }) {
                                     );
                                 }
 
-                                const shopUpi = order.shop_upi || '8095284779@ybl';
+                                const shopUpi = order.shop_upi || auth?.upi_id || '8095284779@ybl';
                                 const shopName = order.shop_name || 'SMART TAILOR';
                                 return (
                                     <div className="bill-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderTop: '1px dashed var(--gray-light)', padding: '16px 0', borderBottom: '1px solid transparent' }}>

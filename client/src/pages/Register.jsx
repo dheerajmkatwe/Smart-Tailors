@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, User, Phone, MapPin, Lock, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle, Scissors, Sparkles, ShieldCheck, Upload, X } from 'lucide-react';
+import { Store, User, Phone, MapPin, Lock, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle, Scissors, Sparkles, ShieldCheck, Upload, X, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 
@@ -19,10 +19,31 @@ export default function Register() {
     const [generatedId, setGeneratedId] = useState('');
     const [formData, setFormData] = useState({
         shop_name: '', admin_name: '', phone_number: '',
-        address: '', password: '', confirmPassword: '', shop_type: 'LADIES', shop_logo: ''
+        address: '', password: '', confirmPassword: '', shop_type: 'LADIES', shop_logo: '', upi_id: ''
     });
+    React.useEffect(() => {
+        toast('The Phone Number Registered will be printed in invoices and bills in the app when you send the bill to customer.', {
+            icon: '📱',
+            duration: 7000,
+            style: {
+                background: '#1a1408',
+                color: '#ffd54f',
+                border: '1px solid #d4af37',
+                fontSize: '13px',
+                fontWeight: '600'
+            }
+        });
+    }, []);
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        if (name === 'phone_number') {
+            const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+            setFormData(prev => ({ ...prev, phone_number: digitsOnly }));
+            return;
+        }
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
@@ -53,6 +74,10 @@ export default function Register() {
             toast.error('All fields are required');
             return;
         }
+        if (!/^[6-9]\d{9}$/.test(formData.phone_number)) {
+            toast.error('Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9).');
+            return;
+        }
         if (formData.password !== formData.confirmPassword) {
             toast.error('Passwords do not match');
             return;
@@ -66,7 +91,8 @@ export default function Register() {
                 address: formData.address,
                 password: formData.password,
                 shop_type: formData.shop_type,
-                shop_logo: formData.shop_logo
+                shop_logo: formData.shop_logo,
+                upi_id: formData.upi_id
             });
             if (res.data.success) {
                 setGeneratedId(res.data.tenant_id);
@@ -186,7 +212,7 @@ export default function Register() {
                 <div style={{ width: '100%', maxWidth: 400 }}>
 
                     {/* Header */}
-                    <div style={{ marginBottom: 32, textAlign: 'center' }}>
+                    <div style={{ marginBottom: 24, textAlign: 'center' }}>
                         <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
                             <img src="/logo.png" alt="Smart Tailor Logo" style={{ width: 72, height: 72, objectFit: 'contain', filter: 'drop-shadow(0 6px 20px rgba(212,175,55,0.35))' }} />
                         </div>
@@ -197,6 +223,37 @@ export default function Register() {
                             Set up your shop profile in under 2 minutes
                         </p>
                     </div>
+
+                    {/* Prominent Medium-Sized Customer Invoice Phone Notice Box */}
+                    {!done && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, rgba(212,175,55,0.14) 0%, rgba(180,140,40,0.08) 100%)',
+                            border: '1.5px solid rgba(212,175,55,0.45)',
+                            borderRadius: 14,
+                            padding: '16px 18px',
+                            marginBottom: 24,
+                            textAlign: 'left',
+                            boxShadow: '0 8px 25px rgba(0,0,0,0.3)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: 10, background: 'rgba(212,175,55,0.2)',
+                                    border: '1px solid rgba(212,175,55,0.4)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2
+                                }}>
+                                    <Phone size={20} style={{ color: '#d4af37' }} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#d4af37', marginBottom: 4, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                                        ⚠️ Official Registration Security Notice
+                                    </div>
+                                    <div style={{ fontSize: 12.5, color: '#ffffff', lineHeight: 1.5, fontWeight: 500 }}>
+                                        The Phone Number Registered will be printed in invoices and bills in the app when you send the bill to customer.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Stepper */}
                     {!done && (
@@ -348,14 +405,67 @@ export default function Register() {
                     ) : (
                         /* Step 2 — Security */
                         <form onSubmit={handleSubmit} style={{ animation: 'fadeUp 0.3s ease both' }}>
+                            {/* Notice Box about Invoice & Bill Phone Printing */}
+                            <div style={{
+                                background: 'rgba(212,175,55,0.09)', border: '1px solid rgba(212,175,55,0.28)',
+                                borderRadius: 12, padding: '14px 16px', marginBottom: 20, textAlign: 'left'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                    <Phone size={18} style={{ color: '#d4af37', flexShrink: 0, marginTop: 2 }} />
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#d4af37', marginBottom: 4 }}>
+                                            📱 Customer Invoices Phone Notice
+                                        </div>
+                                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 1.45, fontWeight: 500 }}>
+                                            The Phone Number Registered will be printed in invoices and bills in the app when you send the bill to customer.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div style={{ marginBottom: 18 }}>
                                 <label style={{ display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                                    WhatsApp / Mobile Number *
+                                    WhatsApp / Mobile Number * <span style={{ color: '#d4af37', fontSize: 11 }}>(10 digits)</span>
                                 </label>
                                 <div className="reg-input-wrap">
                                     <Phone size={16} className="reg-icon" />
-                                    <input className="reg-input" type="tel" name="phone_number" placeholder="10-digit mobile number" value={formData.phone_number} onChange={handleChange} required autoFocus maxLength={10} />
+                                    <input
+                                        className="reg-input"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        name="phone_number"
+                                        placeholder="10-digit Indian mobile number"
+                                        value={formData.phone_number}
+                                        onChange={handleChange}
+                                        required
+                                        autoFocus
+                                        maxLength={10}
+                                    />
                                 </div>
+                                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4, margin: '4px 0 0' }}>
+                                    Must be a valid 10-digit Indian number starting with 6, 7, 8, or 9.
+                                </p>
+                            </div>
+
+                            <div style={{ marginBottom: 18 }}>
+                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                                    Dynamic UPI ID <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400, textTransform: 'none' }}>(Optional)</span>
+                                </label>
+                                <div className="reg-input-wrap">
+                                    <CreditCard size={16} className="reg-icon" />
+                                    <input
+                                        className="reg-input"
+                                        type="text"
+                                        name="upi_id"
+                                        placeholder="e.g. 9876543210@ybl or shop@upi"
+                                        value={formData.upi_id}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4, margin: '4px 0 0' }}>
+                                    Generates dynamic scan-to-pay QR codes for customer advance &amp; bills.
+                                </p>
                             </div>
 
                             <div style={{ marginBottom: 8 }}>

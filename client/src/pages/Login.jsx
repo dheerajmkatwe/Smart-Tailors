@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Scissors, Lock, User, LogIn, Eye, EyeOff, ChevronRight, Sparkles, QrCode, Copy, CheckCircle, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
+import { Scissors, Lock, User, LogIn, Eye, EyeOff, ChevronRight, Sparkles, QrCode, Copy, CheckCircle, AlertTriangle, RefreshCw, CreditCard, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import api from '../api/axios';
@@ -389,7 +389,7 @@ export default function Login({ setAuth }) {
                         /* NORMAL LOGIN FORM */
                         <>
                             {/* Header */}
-                            <div style={{ marginBottom: 32, textAlign: 'center' }}>
+                            <div style={{ marginBottom: 24, textAlign: 'center' }}>
                                 <div className="login-mobile-logo">
                                     <img src="/logo.png" alt="Smart Tailor Logo" style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 6px 20px rgba(212,175,55,0.35))' }} />
                                 </div>
@@ -399,6 +399,35 @@ export default function Login({ setAuth }) {
                                 <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0 }}>
                                     Sign in to your boutique dashboard
                                 </p>
+                            </div>
+
+                            {/* Official Phone Number Registration & Invoice Security Notice Box */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(212,175,55,0.14) 0%, rgba(180,140,40,0.08) 100%)',
+                                border: '1.5px solid rgba(212,175,55,0.45)',
+                                borderRadius: 14,
+                                padding: '14px 16px',
+                                marginBottom: 20,
+                                textAlign: 'left',
+                                boxShadow: '0 8px 25px rgba(0,0,0,0.3)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                    <div style={{
+                                        width: 32, height: 32, borderRadius: 8, background: 'rgba(212,175,55,0.2)',
+                                        border: '1px solid rgba(212,175,55,0.4)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1
+                                    }}>
+                                        <Phone size={17} style={{ color: '#d4af37' }} />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#d4af37', marginBottom: 3, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                                            ⚠️ Official Registration & Invoice Notice
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#ffffff', lineHeight: 1.45, fontWeight: 500 }}>
+                                            The Phone Number Registered will be printed in invoices and bills in the app when you send the bill to customer.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Renewal Success Notification */}

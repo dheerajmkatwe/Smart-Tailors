@@ -53,16 +53,21 @@ function generateSlug(text) {
 // Onboard a new boutique/shop (Tenant)
 router.post('/register', async (req, res) => {
     try {
-        const { shop_name, admin_name, phone_number, address, password, shop_type, shop_logo } = req.body;
+        const { shop_name, admin_name, phone_number, address, password, shop_type, shop_logo, upi_id } = req.body;
 
         if (!shop_name || !admin_name || !phone_number || !password) {
             return res.status(400).json({ error: 'Shop name, Admin name, Phone number, and Password are required' });
         }
 
+        const cleanPhone = String(phone_number).trim();
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile phone number (starting with 6, 7, 8, or 9).' });
+        }
+
         // Check if phone number is blocked
         const blockedCheck = await db.execute({
             sql: 'SELECT * FROM blocked_numbers WHERE phone_number = ? LIMIT 1',
-            args: [phone_number.trim()]
+            args: [cleanPhone]
         });
         if (blockedCheck.rows.length > 0) {
             return res.status(403).json({ error: 'This phone number has been blocked by system administrators. Registration denied.' });
@@ -71,10 +76,10 @@ router.post('/register', async (req, res) => {
         // Check if phone number is already registered under any tenant
         const existingPhone = await db.execute({
             sql: 'SELECT tenant_id, shop_name FROM tenants WHERE phone_number = ? LIMIT 1',
-            args: [phone_number.trim()]
+            args: [cleanPhone]
         });
         if (existingPhone.rows.length > 0) {
-            return res.status(400).json({ error: `An account with phone number ${phone_number.trim()} is already registered under "${existingPhone.rows[0].shop_name}". Please log in with your credentials.` });
+            return res.status(400).json({ error: `An account with phone number ${cleanPhone} is already registered under "${existingPhone.rows[0].shop_name}". Please log in with your credentials.` });
         }
 
         // Generate a unique tenant ID slug
@@ -95,9 +100,9 @@ router.post('/register', async (req, res) => {
         // Insert new tenant shop with initial 30 days free trial expiration (ISO UTC format)
         const initialExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         await db.execute({
-            sql: `INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo, subscription_expires_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [tenantId, shop_name, address || '', phone_number, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null, initialExpiresAt]
+            sql: `INSERT INTO tenants (tenant_id, shop_name, address, phone_number, admin_name, password, subscription_type, shop_type, shop_logo, subscription_expires_at, upi_id) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [tenantId, shop_name, address || '', cleanPhone, admin_name, password, 'Free', shop_type || 'BOTH', shop_logo || null, initialExpiresAt, upi_id || null]
         });
 
         res.status(201).json({
