@@ -67,8 +67,21 @@ function FreeTrialPopup({ auth }) {
 
     useEffect(() => {
         if (!expiresAt) return;
-        setTimeLeft(getTimeLeftFromExpiry(expiresAt));
-        const id = setInterval(() => setTimeLeft(getTimeLeftFromExpiry(expiresAt)), 1000);
+
+        const updateTimer = () => {
+            const tl = getTimeLeftFromExpiry(expiresAt);
+            setTimeLeft(tl);
+            // If expiresAt is set and diff <= 0, trial has expired!
+            const normalized = normalizeIsoDate(expiresAt);
+            const end = new Date(normalized).getTime();
+            if (end - Date.now() <= 0) {
+                console.warn('⏱️ Trial time reached 0! Triggering auto-logout...');
+                api.get('/auth/premium-status').catch(() => {});
+            }
+        };
+
+        updateTimer();
+        const id = setInterval(updateTimer, 1000);
         return () => clearInterval(id);
     }, [expiresAt]);
 

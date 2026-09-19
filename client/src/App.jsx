@@ -70,8 +70,12 @@ export default function App() {
     const checkStatus = () => {
       api.get('/auth/premium-status')
         .then(res => {
+          const isExpired = res.data.isPremiumActive === false || 
+            (res.data.subscription_expires_at && new Date(res.data.subscription_expires_at).getTime() <= Date.now());
+
           // If subscription/trial has expired, force logout immediately
-          if (res.data.isPremiumActive === false) {
+          if (isExpired) {
+            console.warn('🔒 Subscription / trial expired. Logging out shop user...');
             localStorage.removeItem('tailor_auth');
             setAuth(null);
             toast.error('🔒 Free trial has expired! Please log in to renew your subscription.', { duration: 5000 });
@@ -83,13 +87,15 @@ export default function App() {
             isPremiumActive: res.data.isPremiumActive, 
             subscription_type: res.data.subscription_type,
             created_at: res.data.created_at || auth.created_at,
-            subscription_expires_at: res.data.subscription_expires_at || auth.subscription_expires_at
+            subscription_expires_at: res.data.subscription_expires_at
           };
+
           const changed =
             auth.isPremiumActive !== updated.isPremiumActive ||
             auth.subscription_type !== updated.subscription_type ||
             auth.created_at !== updated.created_at ||
             auth.subscription_expires_at !== updated.subscription_expires_at;
+
           if (changed) {
             localStorage.setItem('tailor_auth', JSON.stringify(updated));
             setAuth(updated);
@@ -97,10 +103,10 @@ export default function App() {
         })
         .catch(err => {
           console.error('Failed to sync premium status:', err);
-          if (err.response && err.response.status === 404) {
+          if (err.response && (err.response.status === 404 || err.response.status === 403)) {
             localStorage.removeItem('tailor_auth');
             setAuth(null);
-            toast.error('Session expired or shop account deleted. Please log in again.');
+            toast.error('Session expired or free trial completed. Please log in again.');
           }
         });
     };
@@ -108,8 +114,8 @@ export default function App() {
     // Run check immediately on load
     checkStatus();
 
-    // Periodically check every 3 seconds to auto-detect trial expiry while logged in
-    const interval = setInterval(checkStatus, 3000);
+    // Periodically check every 2 seconds to auto-detect trial expiry while logged in
+    const interval = setInterval(checkStatus, 2000);
     return () => clearInterval(interval);
   }, [auth?.tenant_id, isOnline]);
 
