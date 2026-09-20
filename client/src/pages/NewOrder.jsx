@@ -737,9 +737,34 @@ export default function NewOrder({ onMenuClick, auth }) {
         // Guard: block duplicate submissions from double-clicks
         if (submittingRef.current) return;
         submittingRef.current = true;
-        if (!customer.name || !customer.phone_number) { submittingRef.current = false; return toast.error('Customer name and phone are required'); }
-        if (!deliveryDate) { submittingRef.current = false; return toast.error('Please set a delivery date'); }
-        if (services.some(s => !s.price || parseFloat(s.price) <= 0)) { submittingRef.current = false; return toast.error('All services must have a price'); }
+        if (!customer.phone_number || customer.phone_number.trim().length < 10) {
+            submittingRef.current = false;
+            toast.error('⚠️ Please enter a valid 10-digit Customer Phone Number!');
+            const el = document.getElementById('customer_phone_input');
+            if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            return;
+        }
+
+        if (!customer.name || !customer.name.trim()) {
+            submittingRef.current = false;
+            toast.error('⚠️ Please enter the Customer Name!');
+            const el = document.getElementById('customer_name_input');
+            if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            return;
+        }
+
+        if (!deliveryDate) {
+            submittingRef.current = false;
+            toast.error('⚠️ Please select a Delivery Date!');
+            const el = document.getElementById('delivery_date_input');
+            if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            return;
+        }
+
+        if (services.some(s => !s.price || parseFloat(s.price) <= 0)) {
+            submittingRef.current = false;
+            return toast.error('⚠️ All stitching services must have a valid price (₹)');
+        }
 
         // Requirement: Measurements mandatory for Blouse (IF using Body Measurements)
         const hasBlouse = services.some(s => s.service_type === 'Blouse');
@@ -974,6 +999,7 @@ export default function NewOrder({ onMenuClick, auth }) {
                                     <div className="input-prefix" style={{ flex: 1, minWidth: 0 }}>
                                         <span className="prefix-symbol">+91</span>
                                         <input
+                                            id="customer_phone_input"
                                             type="tel"
                                             ref={phoneRef}
                                             value={customer.phone_number}
@@ -1001,6 +1027,7 @@ export default function NewOrder({ onMenuClick, auth }) {
                                 <div className="form-group">
                                     <label className="form-label">Customer Name *</label>
                                     <input
+                                        id="customer_name_input"
                                         className="form-input"
                                         value={customer.name}
                                         onChange={e => setCustomer(c => ({ ...c, name: e.target.value }))}
@@ -1029,7 +1056,7 @@ export default function NewOrder({ onMenuClick, auth }) {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#E8F5E9', padding: '8px 12px', borderRadius: 8, border: '1px solid #C8E6C9' }}>
                                                 <audio src={audioUrl} controls style={{ height: 32, flex: 1 }} />
                                                 <button type="button" onClick={clearAudio} style={{ background: 'transparent', border: 'none', color: '#D32F2F', cursor: 'pointer', padding: 4 }} title="Delete voice note">
-                                                    <Trash size={16} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         ) : (
@@ -1049,7 +1076,7 @@ export default function NewOrder({ onMenuClick, auth }) {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Delivery Date *</label>
-                                    <input className="form-input" type="date" value={deliveryDate}
+                                    <input id="delivery_date_input" className="form-input" type="date" value={deliveryDate}
                                         onChange={e => setDeliveryDate(e.target.value)} min={bookingDate} required />
                                 </div>
                             </div>
