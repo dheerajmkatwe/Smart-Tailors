@@ -157,7 +157,7 @@ export default function CalendarView({ orders = [], onDateSelect, onStatusUpdate
     const handleQuickStatusChange = (orderId, newStatus) => {
         setUpdatingOrderId(orderId);
         api.put(`/orders/${orderId}/status`, { status: newStatus })
-            .then(res => {
+            .then(() => {
                 toast.success(`Order status updated to ${newStatus}!`);
                 if (onStatusUpdate) onStatusUpdate();
             })

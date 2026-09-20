@@ -32,40 +32,37 @@ function getStageIndex(status) {
 export default function TrackOrder() {
     const { orderId } = useParams();
     const [order, setOrder] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
     // Verification states
     const [phone, setPhone] = useState(() => sessionStorage.getItem(`track_phone_${orderId}`) || '');
+    const [loading, setLoading] = useState(() => Boolean(sessionStorage.getItem(`track_phone_${orderId}`)));
+    const [error, setError] = useState(null);
     const [isVerified, setIsVerified] = useState(false);
     const [phoneInput, setPhoneInput] = useState('');
     const [verifying, setVerifying] = useState(false);
     const [verificationError, setVerificationError] = useState('');
 
     useEffect(() => {
-        if (!orderId) return;
-        if (!phone) {
-            setLoading(false);
-            return;
-        }
+        if (!orderId || !phone) return;
 
-        setLoading(true);
+        let isMounted = true;
         fetch(`${API_BASE}/track/${orderId}?phone=${encodeURIComponent(phone)}`)
             .then(async r => {
                 if (r.status === 403 || r.status === 400) {
                     sessionStorage.removeItem(`track_phone_${orderId}`);
-                    setPhone('');
+                    if (isMounted) setPhone('');
                     throw new Error('Incorrect phone number. Access denied.');
                 }
                 if (!r.ok) throw new Error('Order not found');
                 return r.json();
             })
             .then(data => {
+                if (!isMounted) return;
                 setOrder(data);
                 setIsVerified(true);
                 setLoading(false);
             })
             .catch(e => {
+                if (!isMounted) return;
                 if (e.message === 'Incorrect phone number. Access denied.') {
                     setVerificationError(e.message);
                     setIsVerified(false);
@@ -74,6 +71,8 @@ export default function TrackOrder() {
                 }
                 setLoading(false);
             });
+
+        return () => { isMounted = false; };
     }, [orderId, phone]);
 
     const handleVerify = (e) => {

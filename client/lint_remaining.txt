@@ -1,0 +1,82 @@
+﻿
+C:\Users\dhira\Desktop\Smart Tailors\client\src\components\TenantUpiQRModal.jsx
+  31:13  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  29 |     useEffect(() => {
+  30 |         if (isOpen && amount > 0) {
+> 31 |             setStatus(activeUpi ? 'ready' : 'no_upi');
+     |             ^^^^^^^^^ Avoid calling setState() directly within an effect
+  32 |             setTimeLeft(900);
+  33 |
+  34 |             // Request Razorpay Dynamic QR API  react-hooks/set-state-in-effect
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\BillPreview.jsx
+    1:38  error  'useRef' is defined but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+  189:22  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u        no-unused-vars
+  785:46  error  'payDetails' is defined but never used. Allowed unused args must match /^[A-Z_]|^_/u  no-unused-vars
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\BoutiqueSettings.jsx
+   15:11  error  'isPremium' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+   16:11  error  'subscriptionType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   72:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                    no-unused-vars
+   83:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                    no-unused-vars
+   92:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                    no-unused-vars
+  164:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                    no-unused-vars
+  216:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u                    no-unused-vars
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\CustomerSearch.jsx
+  103:8  warning  React Hook useEffect has a missing dependency: 'handleSelectById'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\Dashboard.jsx
+  324:8  warning  React Hook useEffect has missing dependencies: 'data.dueTodayOrders' and 'loadDashboardData'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\Login.jsx
+  84:11  error  'handleRenewSubscription' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\NewOrder.jsx
+   156:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                                        no-unused-vars
+   201:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                                        no-unused-vars
+   307:30  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                                        no-unused-vars
+   575:30  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u                                          no-unused-vars
+   607:8   warning  React Hook useEffect has a missing dependency: 'handlePhoneSearch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   662:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                                        no-unused-vars
+   828:22  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                                        no-unused-vars
+  1139:68  error    'idx' is defined but never used. Allowed unused args must match /^[A-Z_]|^_/u                                         no-unused-vars
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\OrderHistory.jsx
+    2:29  error    'useNavigate' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                              no-unused-vars
+  105:8   warning  React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\Profits.jsx
+  30:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\Subscribe.jsx
+   19:11  error    'isPaidPremium' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+   53:8   warning  React Hook useEffect has a missing dependency: 'auth'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  137:30  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u                           no-unused-vars
+  861:33  error    Empty block statement                                                                                    no-empty
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\SuperAdmin.jsx
+   403:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u          no-unused-vars
+   415:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u          no-unused-vars
+   448:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u          no-unused-vars
+   481:18  error  'err' is defined but never used. Allowed unused caught errors must match /^_/u          no-unused-vars
+   927:51  error  'hasKey' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\WorkerDashboard.jsx
+  29:8  warning  React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\utils\upiHelper.js
+  6:59  error  'note' is defined but never used. Allowed unused args must match /^[A-Z_]|^_/u  no-unused-vars
+
+Ô£û 39 problems (33 errors, 6 warnings)
+

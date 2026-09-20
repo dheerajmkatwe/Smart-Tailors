@@ -1,0 +1,19 @@
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\NewOrder.jsx
+  1138:68  error  'idx' is defined but never used. Allowed unused args must match /^[A-Z_]|^_/u  no-unused-vars
+  1525:60  error  'generateUpiUri' is not defined                                                no-undef
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\Subscribe.jsx
+  860:33  error  Empty block statement  no-empty
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\pages\SuperAdmin.jsx
+   927:51  error  'hasKey' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+  1342:14  error  Unexpected constant truthiness on the left-hand side of a `&&` expression               no-constant-binary-expression
+
+C:\Users\dhira\Desktop\Smart Tailors\client\src\utils\upiHelper.js
+  6:59  error  'note' is defined but never used. Allowed unused args must match /^[A-Z_]|^_/u  no-unused-vars
+
+✖ 8 problems (8 errors, 0 warnings)
+

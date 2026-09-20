@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Eye, Filter, RefreshCw, Menu, LayoutGrid, List, Edit2, Check, X, User, Trash2, AlertTriangle, Grid, LayoutList } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Search, Eye, Filter, RefreshCw, Menu, Edit2, Check, X, User, Trash2, AlertTriangle } from 'lucide-react';
 import api from '../api/axios';
 import { getOfflineOrders } from '../utils/offlineStore';
-
-function StatusBadge({ status }) {
-    const cls = { Pending: 'badge badge-pending', Ready: 'badge badge-ready', Delivered: 'badge badge-delivered' }[status] || 'badge';
-    return <span className={cls}>{status}</span>;
-}
 
 function formatDate(d) {
     if (!d) return '-';
@@ -102,6 +97,7 @@ export default function OrderHistory({ onMenuClick }) {
             fetchOrders();
         }, 300);
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, statusFilter, dateFilter]);
 
     async function handleStatusChange(orderId, newStatus) {

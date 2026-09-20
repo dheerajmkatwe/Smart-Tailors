@@ -3,28 +3,31 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import {
     LayoutDashboard, PlusCircle, Search, ClipboardList,
-    Scissors, X, LineChart, LogOut, DollarSign, Wrench, Settings, Crown
+    Scissors, X, LineChart, LogOut, DollarSign, Wrench, Settings
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, auth, setAuth }) {
     const navigate = useNavigate();
     const isAdmin = auth?.role === 'Admin';
-    const isPremium = auth?.isPremiumActive;
-    const currentSub = auth?.subscription_type || 'Free';
-    const isPaidPremium = isPremium && (currentSub === 'Monthly' || currentSub === 'Yearly');
 
     const [branches, setBranches] = useState([]);
     const [activeBranch, setActiveBranch] = useState(localStorage.getItem('tailor_branch_id') || 'all');
     
     // Domain Switcher (LADIES/MENS)
     const canSwitchMode = auth?.shop_type === 'BOTH' || !auth?.shop_type;
-    const [activeMode, setActiveMode] = useState(localStorage.getItem('tailor_active_mode') || 'LADIES');
+    const [activeMode, setActiveMode] = useState(() => {
+        const saved = localStorage.getItem('tailor_active_mode');
+        if (saved) return saved;
+        if (auth?.shop_type) {
+            return auth.shop_type === 'BOTH' ? 'LADIES' : auth.shop_type;
+        }
+        return 'LADIES';
+    });
 
     useEffect(() => {
         if (!localStorage.getItem('tailor_active_mode') && auth?.shop_type) {
             const initialMode = auth.shop_type === 'BOTH' ? 'LADIES' : auth.shop_type;
             localStorage.setItem('tailor_active_mode', initialMode);
-            setActiveMode(initialMode);
         }
     }, [auth]);
 

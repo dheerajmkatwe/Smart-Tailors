@@ -100,6 +100,7 @@ export default function CustomerSearch({ onMenuClick, auth }) {
         if (id) {
             handleSelectById(id);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     async function handleSelectById(cid) {

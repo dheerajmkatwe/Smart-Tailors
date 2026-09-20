@@ -70,7 +70,7 @@ export default function useOfflineSync() {
           audio_data: audioData || undefined,
           recordingTime: recordingTime || undefined
         };
-        const orderRes = await api.post('/orders', finalOrderPayload);
+        await api.post('/orders', finalOrderPayload);
 
         // Delete from local queue after successful sync
         await removeOfflineOrder(order.id);

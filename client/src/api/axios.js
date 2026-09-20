@@ -32,7 +32,9 @@ api.interceptors.request.use((config) => {
             if (user && user.tenant_id) {
                 config.headers['X-Tenant-Id'] = user.tenant_id;
             }
-        } catch (e) {}
+        } catch {
+            // Ignore invalid JSON in localStorage
+        }
     }
     const branchId = localStorage.getItem('tailor_branch_id');
     if (branchId) {

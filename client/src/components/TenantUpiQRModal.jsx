@@ -18,19 +18,17 @@ export default function TenantUpiQRModal({
     note = 'Order Payment',
     orderId = null
 }) {
-    if (!isOpen) return null;
-
     const [status, setStatus] = useState('ready'); // 'ready' | 'verifying' | 'paid' | 'no_upi'
     const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
     const [customUpi, setCustomUpi] = useState(upiId);
     const [activeUpi, setActiveUpi] = useState(upiId);
     const [qrId, setQrId] = useState(null);
     const [razorpayUpiUri, setRazorpayUpiUri] = useState('');
-    const [isAutoPolling, setIsAutoPolling] = useState(false);
 
     // Create Razorpay Dynamic QR on modal open
     useEffect(() => {
         if (isOpen && amount > 0) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setStatus(activeUpi ? 'ready' : 'no_upi');
             setTimeLeft(900);
 
@@ -52,19 +50,17 @@ export default function TenantUpiQRModal({
                 console.warn('Razorpay dynamic QR notice:', err.message);
             });
         }
-    }, [isOpen, amount, activeUpi]);
+    }, [isOpen, amount, activeUpi, shopName, note, customerName, orderId]);
 
     // Real-Time Automatic Webhook Polling Loop (Checks every 2 seconds)
     useEffect(() => {
         if (!isOpen || !qrId || status === 'paid') return;
-        setIsAutoPolling(true);
 
         const pollTimer = setInterval(() => {
             api.get(`/api/razorpay/qr-status/${qrId}`)
                 .then(res => {
                     if (res.data?.status === 'paid') {
                         clearInterval(pollTimer);
-                        setIsAutoPolling(false);
                         setStatus('paid');
                         toast.success('⚡ Payment Automatically Verified via Razorpay Webhook!');
                         
@@ -84,9 +80,8 @@ export default function TenantUpiQRModal({
 
         return () => {
             clearInterval(pollTimer);
-            setIsAutoPolling(false);
         };
-    }, [isOpen, qrId, status]);
+    }, [isOpen, qrId, status, activeUpi, amount, onPaymentSuccess]);
 
     // Countdown Timer
     useEffect(() => {
@@ -102,6 +97,8 @@ export default function TenantUpiQRModal({
         }, 1000);
         return () => clearInterval(timer);
     }, [isOpen, status]);
+
+    if (!isOpen) return null;
 
     const formatTime = (secs) => {
         const m = Math.floor(secs / 60);

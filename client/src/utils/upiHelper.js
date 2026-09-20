@@ -21,8 +21,11 @@ export function generateUpiUri({ upiId, shopName, amount, note }) {
     const numAmt = Number(amount || 0);
     const amountParam = numAmt > 0 ? `&am=${numAmt.toFixed(2)}` : '';
 
+    // Transaction note if provided (NPCI standard parameter: tn=...)
+    const noteParam = note ? `&tn=${encodeURIComponent(String(note).replace(/[^a-zA-Z0-9 ]/g, '').trim())}` : '';
+
     // Gold Standard NPCI format: upi://pay?pa=...&pn=...&am=1.00&cu=INR
-    return `upi://pay?pa=${cleanUpi}&pn=${cleanName}${amountParam}&cu=INR`;
+    return `upi://pay?pa=${cleanUpi}&pn=${cleanName}${amountParam}${noteParam}&cu=INR`;
 }
 
 export function generateDynamicUpiUri({ upiId, shopName, amount, note }) {

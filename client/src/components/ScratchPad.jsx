@@ -30,6 +30,7 @@ export default function ScratchPad({ onSave, onClose }) {
     // Fill background with white
     context.fillStyle = 'white';
     context.fillRect(0, 0, rect.width, rect.height);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

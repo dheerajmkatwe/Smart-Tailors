@@ -81,26 +81,7 @@ export default function Login({ setAuth }) {
         }
     };
 
-    const handleRenewSubscription = async () => {
-        if (!expiredData?.tenant_id) return;
-        setRenewing(true);
-        try {
-            const res = await api.post('/auth/renew-subscription', {
-                tenant_id: expiredData.tenant_id,
-                plan: expiredData.next_plan
-            });
-            if (res.data.success) {
-                toast.success('🎉 Subscription renewed successfully!');
-                setRenewSuccessMsg(res.data.message || 'Your account has been reactivated! You can now log in.');
-                setUsername(expiredData.tenant_id);
-                setExpiredData(null);
-            }
-        } catch (err) {
-            toast.error(err.response?.data?.error || err.message || 'Failed to activate subscription. Please try again.');
-        } finally {
-            setRenewing(false);
-        }
-    };
+
 
     const handleRazorpayPay = async () => {
         if (!expiredData?.tenant_id) return;

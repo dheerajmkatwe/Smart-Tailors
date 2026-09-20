@@ -15,8 +15,6 @@ export default function Subscribe({ onMenuClick }) {
 
     const isPremium = auth?.isPremiumActive;
     const currentSub = auth?.subscription_type || 'Free';
-    // isPaidPremium = true ONLY when actually on a paid plan (not free trial)
-    const isPaidPremium = isPremium && (currentSub === 'Monthly' || currentSub === 'Yearly');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,21 +26,22 @@ export default function Subscribe({ onMenuClick }) {
                 // Fetch latest premium status details
                 const statusRes = await api.get('/auth/premium-status');
                 
-                const updated = {
-                    ...auth,
-                    shop_name: profile.shop_name,
-                    name: profile.admin_name,
-                    upi_id: profile.upi_id || '',
-                    gst_id: profile.gst_id || '',
-                    phone_number: profile.phone_number || '',
-                    address: profile.address || '',
-                    isPremiumActive: statusRes.data.isPremiumActive,
-                    subscription_type: statusRes.data.subscription_type,
-                    created_at: statusRes.data.created_at
-                };
-                
-                setAuth(updated);
-                localStorage.setItem('tailor_auth', JSON.stringify(updated));
+                setAuth(prev => {
+                    const updated = {
+                        ...prev,
+                        shop_name: profile.shop_name,
+                        name: profile.admin_name,
+                        upi_id: profile.upi_id || '',
+                        gst_id: profile.gst_id || '',
+                        phone_number: profile.phone_number || '',
+                        address: profile.address || '',
+                        isPremiumActive: statusRes.data.isPremiumActive,
+                        subscription_type: statusRes.data.subscription_type,
+                        created_at: statusRes.data.created_at
+                    };
+                    localStorage.setItem('tailor_auth', JSON.stringify(updated));
+                    return updated;
+                });
             } catch (err) {
                 console.error('Failed to sync profile status:', err);
             } finally {
@@ -858,7 +857,9 @@ export default function Subscribe({ onMenuClick }) {
                                 // Play a celebratory ascending arpeggio
                                 [523, 659, 784, 1047, 1319].forEach((f, i) => playNote(f, i * 0.15, 0.5));
                             }
-                        } catch {}
+                        } catch {
+                            // ignore audio context error
+                        }
                         return null;
                     })()}
 

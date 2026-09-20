@@ -32,7 +32,7 @@ export default function KpiOverviewModal({ isOpen, onClose, categoryKey, allOrde
         icon: Package,
         color: 'var(--maroon)',
         bgColor: 'rgba(106,30,46,0.1)',
-        filterFn: o => true,
+        filterFn: () => true,
     };
 
     if (categoryKey === 'dueToday') {
@@ -103,7 +103,7 @@ export default function KpiOverviewModal({ isOpen, onClose, categoryKey, allOrde
     const handleQuickStatusChange = (orderId, newStatus) => {
         setUpdatingOrderId(orderId);
         api.put(`/orders/${orderId}/status`, { status: newStatus })
-            .then(res => {
+            .then(() => {
                 toast.success(`Order #${orderId} marked as ${newStatus}!`);
                 if (onStatusUpdate) onStatusUpdate();
             })

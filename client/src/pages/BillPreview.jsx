@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Download, Share2, Printer, ChevronLeft, CheckCircle, Clock, Menu, Image as ImageIcon, X, Mic, Edit2 } from 'lucide-react';
 import QRCode from 'react-qr-code';
@@ -782,7 +782,7 @@ export default function BillPreview({ onMenuClick }) {
                 <TenantUpiQRModal
                     isOpen={showUpiModal}
                     onClose={() => setShowUpiModal(false)}
-                    onPaymentSuccess={async (payDetails) => {
+                    onPaymentSuccess={async () => {
                         setShowUpiModal(false);
                         try {
                             await settleBalanceInDB();

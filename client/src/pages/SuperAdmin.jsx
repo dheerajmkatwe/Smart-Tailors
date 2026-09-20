@@ -350,13 +350,8 @@ export default function SuperAdmin() {
     const [fetching, setFetching] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Modal / Subscription states
-    const [selectedTenant, setSelectedTenant] = useState(null);
-    const [showModal, setShowModal] = useState(false);
+    // Modal / Overview states
     const [overviewTenant, setOverviewTenant] = useState(null);
-    const [subType, setSubType] = useState('Free');
-    const [saving, setSaving] = useState(false);
-    const [generatedCard, setGeneratedCard] = useState(null);
 
     // Tab and Block states
     const [activeTab, setActiveTab] = useState('boutiques'); // 'boutiques' | 'blocked'
@@ -504,41 +499,6 @@ export default function SuperAdmin() {
             (t.admin_name || '').toLowerCase().includes(query)
         );
     });
-
-    const handleOpenSubscriptionModal = (tenant) => {
-        setSelectedTenant(tenant);
-        setSubType(tenant.subscription_type || 'Free');
-        setGeneratedCard(null);
-        setShowModal(true);
-    };
-
-    const handleSaveSubscription = async (e) => {
-        e.preventDefault();
-        if (!selectedTenant) return;
-        setSaving(true);
-        try {
-            const res = await api.post(`/auth/super-admin/tenants/${selectedTenant.tenant_id}/subscription`, {
-                subscription_type: subType
-            });
-            
-            toast.success('Subscription plan updated!');
-            
-            if (subType === 'Monthly' || subType === 'Yearly') {
-                setGeneratedCard({
-                    subscription_type: res.data.subscription_type,
-                    subscription_key: res.data.subscription_key,
-                    subscription_pin: res.data.subscription_pin
-                });
-            } else {
-                setShowModal(false);
-                fetchTenants();
-            }
-        } catch (err) {
-            toast.error(err.response?.data?.error || 'Failed to update subscription');
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const cleanPhone = (phone) => {
         if (!phone) return '';
@@ -815,14 +775,14 @@ export default function SuperAdmin() {
                                         <Send size={14} /> Contact on WhatsApp
                                     </a>
                                     <button
-                                        onClick={() => handleOpenSubscriptionModal(t)}
+                                        onClick={() => setOverviewTenant(t)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px',
                                             background: '#d4af37', border: 'none', color: '#0d0d11',
                                             borderRadius: '8px', fontSize: '12.5px', fontWeight: 'bold', cursor: 'pointer'
                                         }}
                                     >
-                                        <Gift size={14} /> Fulfill & Generate Pass Key
+                                        <Gift size={14} /> Review & Manage Shop Access
                                     </button>
                                 </div>
                             </div>
@@ -924,8 +884,6 @@ export default function SuperAdmin() {
                                     </thead>
                                     <tbody>
                                         {filteredTenants.map((t, idx) => {
-                                            const hasKey = t.subscription_key && t.subscription_pin;
-                                            
                                             // Dynamic calculation: if subscription is Free and registered within 30 days, display "New Free", else "Free"
                                             let displayPlan = t.subscription_type || 'Free';
                                             if (displayPlan === 'Free' || displayPlan === 'New Free') {
@@ -1337,340 +1295,6 @@ export default function SuperAdmin() {
                     </div>
                 )}
             </div>
-
-            {/* Subscription Modal removed — subscriptions are managed automatically via Razorpay payments */}
-            {false && showModal && selectedTenant && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(12px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1000, padding: '20px', transition: 'all 0.3s'
-                }}>
-                    <div style={{
-                        background: '#12121a', border: '1px solid #28283c', borderRadius: '20px',
-                        maxWidth: '520px', width: '100%', padding: '32px', boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
-                        position: 'relative'
-                    }}>
-                        {/* Close Button */}
-                        <button 
-                            onClick={() => { setShowModal(false); setGeneratedCard(null); }}
-                            style={{
-                                position: 'absolute', top: '24px', right: '24px', background: 'transparent',
-                                border: 'none', color: '#8888a0', cursor: 'pointer', transition: 'color 0.2s'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                            onMouseLeave={e => e.currentTarget.style.color = '#8888a0'}
-                        >
-                            <X size={20} />
-                        </button>
-
-                        {/* Header */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                            <div style={{
-                                width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(212, 175, 55, 0.1)',
-                                border: '1px solid rgba(212, 175, 55, 0.3)', display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', color: '#d4af37'
-                            }}>
-                                <CreditCard size={20} />
-                            </div>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#fff' }}>
-                                    Manage Boutique Plan
-                                </h3>
-                                <p style={{ margin: 0, fontSize: '12px', color: '#8888a0' }}>
-                                    Platform authorization and premium access controls
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Shop Context Info */}
-                        <div style={{
-                            background: '#181824', border: '1px solid #232335', borderRadius: '12px',
-                            padding: '16px 20px', marginBottom: '28px'
-                        }}>
-                            <div style={{ fontSize: '10px', color: '#8888a0', marginBottom: '4px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>
-                                Shop Target
-                            </div>
-                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>
-                                {selectedTenant.shop_name}
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: '#b5b5c9', flexWrap: 'wrap' }}>
-                                <div>Owner: <strong>{selectedTenant.admin_name}</strong></div>
-                                <div style={{ color: '#38384f' }}>|</div>
-                                <div>Phone: <strong>{selectedTenant.phone_number}</strong></div>
-                            </div>
-                        </div>
-
-                        {/* Current details / Generation output */}
-                        {generatedCard ? (
-                            /* Generated Card Success View */
-                            <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                                <div style={{
-                                    background: 'rgba(74, 222, 128, 0.05)', border: '1px dashed #4ade80',
-                                    borderRadius: '12px', padding: '16px 20px', textAlign: 'center', marginBottom: '24px'
-                                }}>
-                                    <div style={{ color: '#4ade80', display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center', marginBottom: '8px', fontWeight: '700', fontSize: '14px' }}>
-                                        <CheckCircle size={18} /> Gift Card Activated!
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: '12px', color: '#a3a3c2', lineHeight: 1.5 }}>
-                                        Premium access config has been registered. Please distribute these credentials to the client.
-                                    </p>
-                                </div>
-
-                                {/* Card details box */}
-                                <div style={{
-                                    background: 'linear-gradient(135deg, #1d1d2b 0%, #151520 100%)',
-                                    border: '1px solid #33334c', borderRadius: '16px', padding: '24px',
-                                    position: 'relative', overflow: 'hidden', marginBottom: '24px'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px',
-                                        background: 'rgba(212, 175, 55, 0.1)', filter: 'blur(40px)', borderRadius: '50%'
-                                    }} />
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                        <span style={{ fontSize: '11px', color: '#d4af37', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                                            Smart Pass
-                                        </span>
-                                        <span style={{
-                                            padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                                            background: generatedCard.subscription_type === 'Yearly' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(249, 115, 22, 0.2)',
-                                            color: generatedCard.subscription_type === 'Yearly' ? '#c084fc' : '#fb923c',
-                                            border: generatedCard.subscription_type === 'Yearly' ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid rgba(249, 115, 22, 0.3)'
-                                        }}>
-                                            {generatedCard.subscription_type} Plan
-                                        </span>
-                                    </div>
-
-                                    {/* Code Grid */}
-                                    <div style={{ display: 'flex', gap: '16px', marginBottom: '4px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '10px', color: '#8888a0', textTransform: 'uppercase', fontWeight: '600', marginBottom: '6px' }}>
-                                                Gift Pass Key
-                                            </div>
-                                            <div style={{
-                                                background: '#111118', border: '1px solid #232335', borderRadius: '8px',
-                                                padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                                            }}>
-                                                <code style={{ fontSize: '14px', fontWeight: '700', color: '#fff', letterSpacing: '1px', fontFamily: 'monospace' }}>
-                                                    {generatedCard.subscription_key}
-                                                </code>
-                                                <button 
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(generatedCard.subscription_key);
-                                                        toast.success('Key copied!');
-                                                    }}
-                                                    style={{ background: 'transparent', border: 'none', color: '#68688d', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                    title="Copy Key"
-                                                >
-                                                    <Copy size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ width: '130px' }}>
-                                            <div style={{ fontSize: '10px', color: '#8888a0', textTransform: 'uppercase', fontWeight: '600', marginBottom: '6px' }}>
-                                                Security PIN
-                                            </div>
-                                            <div style={{
-                                                background: '#111118', border: '1px solid #232335', borderRadius: '8px',
-                                                padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                                            }}>
-                                                <code style={{ fontSize: '14px', fontWeight: '700', color: '#fff', letterSpacing: '2px', fontFamily: 'monospace' }}>
-                                                    {generatedCard.subscription_pin}
-                                                </code>
-                                                <button 
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(generatedCard.subscription_pin);
-                                                        toast.success('PIN copied!');
-                                                    }}
-                                                    style={{ background: 'transparent', border: 'none', color: '#68688d', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                    title="Copy PIN"
-                                                >
-                                                    <Copy size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Action buttons */}
-                                <div style={{ display: 'flex', gap: '16px' }}>
-                                    <button
-                                        onClick={() => {
-                                            const msg = `Hello *${selectedTenant.admin_name}*,\n\nYour premium *Smart Tailor* Gift Card is ready for *${selectedTenant.shop_name}*!\n\n🔹 *Plan:* ${generatedCard.subscription_type}\n🔹 *Card Code:* ${generatedCard.subscription_key}\n🔹 *PIN Code:* ${generatedCard.subscription_pin}\n\nSimply input this key in your dashboard to activate full platform access. Welcome to the Premium Club! ✨`;
-                                            window.open(`https://wa.me/${cleanPhone(selectedTenant.phone_number)}?text=${encodeURIComponent(msg)}`, '_blank');
-                                        }}
-                                        style={{
-                                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                                            padding: '14px', borderRadius: '10px', background: '#25D366', border: 'none',
-                                            color: '#fff', fontSize: '14px', fontWeight: '700', cursor: 'pointer',
-                                            transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(37, 211, 102, 0.2)'
-                                        }}
-                                    >
-                                        <Send size={16} /> Send via WhatsApp
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowModal(false);
-                                            setGeneratedCard(null);
-                                            fetchTenants();
-                                        }}
-                                        style={{
-                                            padding: '14px 20px', borderRadius: '10px', background: 'transparent',
-                                            border: '1px solid #28283c', color: '#b5b5c9', fontSize: '14px', fontWeight: '600',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        Done
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            /* Select Subscription Type View */
-                            <form onSubmit={handleSaveSubscription}>
-                                <div style={{ marginBottom: '28px' }}>
-                                    <label style={{ display: 'block', color: '#b5b5c9', fontSize: '11px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                        Select Subscription Tier
-                                    </label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        {/* Free Tier */}
-                                        <label style={{
-                                            display: 'flex', alignItems: 'center', gap: '14px',
-                                            padding: '14px 18px', borderRadius: '12px', border: subType === 'Free' ? '2px solid #64748b' : '1px solid #232335',
-                                            background: subType === 'Free' ? 'rgba(100, 116, 139, 0.05)' : '#161622',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}>
-                                            <input 
-                                                type="radio" 
-                                                name="subType" 
-                                                value="Free" 
-                                                checked={subType === 'Free'}
-                                                onChange={e => setSubType(e.target.value)}
-                                                style={{ accentColor: '#64748b', width: '16px', height: '16px' }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', fontSize: '14px', color: subType === 'Free' ? '#fff' : '#b5b5c9' }}>
-                                                    Free Access
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#8888a0', marginTop: '2px' }}>
-                                                    Basic platform features only. No Gift passes.
-                                                </div>
-                                            </div>
-                                        </label>
-
-                                        {/* New Free Tier */}
-                                        <label style={{
-                                            display: 'flex', alignItems: 'center', gap: '14px',
-                                            padding: '14px 18px', borderRadius: '12px', border: subType === 'New Free' ? '2px solid #38bdf8' : '1px solid #232335',
-                                            background: subType === 'New Free' ? 'rgba(56, 189, 248, 0.05)' : '#161622',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}>
-                                            <input 
-                                                type="radio" 
-                                                name="subType" 
-                                                value="New Free" 
-                                                checked={subType === 'New Free'}
-                                                onChange={e => setSubType(e.target.value)}
-                                                style={{ accentColor: '#38bdf8', width: '16px', height: '16px' }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', fontSize: '14px', color: subType === 'New Free' ? '#fff' : '#b5b5c9' }}>
-                                                    New Free Access
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#8888a0', marginTop: '2px' }}>
-                                                    Assigned to newly registered boutique accounts.
-                                                </div>
-                                            </div>
-                                        </label>
-
-                                        {/* Monthly Tier */}
-                                        <label style={{
-                                            display: 'flex', alignItems: 'center', gap: '14px',
-                                            padding: '14px 18px', borderRadius: '12px', border: subType === 'Monthly' ? '2px solid #fb923c' : '1px solid #232335',
-                                            background: subType === 'Monthly' ? 'rgba(251, 146, 60, 0.05)' : '#161622',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}>
-                                            <input 
-                                                type="radio" 
-                                                name="subType" 
-                                                value="Monthly" 
-                                                checked={subType === 'Monthly'}
-                                                onChange={e => setSubType(e.target.value)}
-                                                style={{ accentColor: '#fb923c', width: '16px', height: '16px' }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', fontSize: '14px', color: subType === 'Monthly' ? '#fff' : '#b5b5c9', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    Monthly Premium <span style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(251, 146, 60, 0.1)', color: '#fb923c', borderRadius: '4px', fontWeight: '700' }}>Popular</span>
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#8888a0', marginTop: '2px' }}>
-                                                    Generates unique 12-char gift card pass + 6-digit PIN.
-                                                </div>
-                                            </div>
-                                        </label>
-
-                                        {/* Yearly Tier */}
-                                        <label style={{
-                                            display: 'flex', alignItems: 'center', gap: '14px',
-                                            padding: '14px 18px', borderRadius: '12px', border: subType === 'Yearly' ? '2px solid #c084fc' : '1px solid #232335',
-                                            background: subType === 'Yearly' ? 'rgba(192, 132, 252, 0.05)' : '#161622',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}>
-                                            <input 
-                                                type="radio" 
-                                                name="subType" 
-                                                value="Yearly" 
-                                                checked={subType === 'Yearly'}
-                                                onChange={e => setSubType(e.target.value)}
-                                                style={{ accentColor: '#c084fc', width: '16px', height: '16px' }}
-                                            />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', fontSize: '14px', color: subType === 'Yearly' ? '#fff' : '#b5b5c9', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    Yearly Elite Pass <span style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(192, 132, 252, 0.1)', color: '#c084fc', borderRadius: '4px', fontWeight: '700' }}>Best Value</span>
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#8888a0', marginTop: '2px' }}>
-                                                    Generates high tier 12-char gift card pass + 6-digit PIN.
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Footer buttons */}
-                                <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', borderTop: '1px solid #1a1a26', paddingTop: '20px' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        style={{
-                                            padding: '12px 20px', borderRadius: '10px', background: 'transparent',
-                                            border: '1px solid #28283c', color: '#b5b5c9', fontSize: '14px', fontWeight: '600',
-                                            cursor: 'pointer', transition: 'all 0.2s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px',
-                                            borderRadius: '10px', background: '#d4af37', border: 'none', color: '#0d0d11',
-                                            fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s',
-                                            boxShadow: '0 4px 15px rgba(212, 175, 55, 0.2)'
-                                        }}
-                                    >
-                                        <Gift size={16} /> {saving ? 'Saving...' : subType === 'Free' ? 'Save Changes' : 'Generate Gift Pass'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Shop Timing & Registration Overview Modal */}
             {overviewTenant && (

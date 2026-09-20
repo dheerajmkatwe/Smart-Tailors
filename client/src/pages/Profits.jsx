@@ -10,16 +10,16 @@ export default function Profits({ onMenuClick }) {
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
-
     const fetchOrders = () => {
         api.get('/orders')
             .then(res => setOrders(res.data))
             .catch(console.error)
             .finally(() => setLoading(false));
     };
+
+    useEffect(() => {
+        fetchOrders();
+    }, []);
 
     const handleSaveExpense = async (orderId) => {
         try {

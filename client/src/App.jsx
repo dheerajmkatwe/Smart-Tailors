@@ -28,12 +28,17 @@ function OfflineBannerWrapper({ isOnline, isSyncing, syncOfflineOrders }) {
   const location = useLocation();
 
   useEffect(() => {
+    let hideTimer;
     if (!isOnline) {
-      setShow(true);
-      const timer = setTimeout(() => setShow(false), 2000);
-      return () => clearTimeout(timer);
+      const showTimer = setTimeout(() => setShow(true), 0);
+      hideTimer = setTimeout(() => setShow(false), 2000);
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     } else {
-      setShow(false);
+      const hideTimer2 = setTimeout(() => setShow(false), 0);
+      return () => clearTimeout(hideTimer2);
     }
   }, [location.pathname, isOnline]);
 
@@ -52,15 +57,13 @@ function OfflineBannerWrapper({ isOnline, isSyncing, syncOfflineOrders }) {
 }
 
 export default function App() {
-  const [sidebarOpen, useState_sidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [auth, setAuth] = useState(() => {
     const saved = localStorage.getItem('tailor_auth');
     try { return saved ? JSON.parse(saved) : null; } catch { return null; }
   });
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW();
+
+  useRegisterSW();
 
   const { isOnline, isSyncing, syncOfflineOrders } = useOfflineSync();
 
@@ -124,11 +127,11 @@ export default function App() {
     // Periodically check every 2 seconds to auto-detect trial expiry while logged in
     const interval = setInterval(checkStatus, 2000);
     return () => clearInterval(interval);
-  }, [auth?.tenant_id, isOnline]);
+  }, [auth, isOnline]);
 
   const isAdmin = auth?.role === 'Admin';
-  const toggleSidebar = () => useState_sidebarOpen(!sidebarOpen);
-  const closeSidebar = () => useState_sidebarOpen(false);
+  const toggleSidebar = () => setSidebarOpen(prev => !prev);
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <BrowserRouter>

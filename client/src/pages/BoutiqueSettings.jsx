@@ -1,19 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Store, User, Phone, MapPin, CreditCard, Landmark, Users, Plus, Trash2, Save, Scissors, Crown, Key, Gift, Calendar, Sparkles, AlertCircle, Edit, X, Upload } from 'lucide-react';
+import { Store, User, Phone, MapPin, CreditCard, Users, Plus, Trash2, Save, Scissors, Key, Edit, X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import api from '../api/axios';
 
 export default function BoutiqueSettings({ onMenuClick }) {
-    const auth = (() => {
-        try {
-            return JSON.parse(localStorage.getItem('tailor_auth') || '{}');
-        } catch {
-            return {};
-        }
-    })();
-    const isPremium = auth?.isPremiumActive;
-    const subscriptionType = auth?.subscription_type || 'Free';
     const [profile, setProfile] = useState({
         shop_name: '',
         admin_name: '',

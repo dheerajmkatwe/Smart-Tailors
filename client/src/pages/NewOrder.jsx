@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ChevronDown, User, Ruler, Scissors, CreditCard, Search, Menu, Image as ImageIcon, Camera, X, Mic, Square, Trash, PenTool, FolderOpen, Save } from 'lucide-react';
+import { Plus, Trash2, User, Search, Menu, Image as ImageIcon, Camera, X, Mic, Square, PenTool, FolderOpen, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import api from '../api/axios';
@@ -604,6 +604,7 @@ export default function NewOrder({ onMenuClick, auth }) {
             // Optional: reset name if it was prefilled and now user is typing a new number
             // setCustomer(c => ({ ...c, name: '' }));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customer.phone_number, customerFound]);
 
     // ── Service helpers ───────────────────────────────
@@ -1136,7 +1137,7 @@ export default function NewOrder({ onMenuClick, auth }) {
                                         </button>
                                     </div>
 
-                                    {extraMeasurements.map((extra, idx) => (
+                                    {extraMeasurements.map((extra) => (
                                         <div key={extra.id} className="card mb-16" style={{ background: 'var(--ivory)', border: '1px solid var(--gold-pale)', padding: 16 }}>
                                         <div className="extra-meas-header-row">
                                                 <div style={{ flex: 2, minWidth: 0 }}>

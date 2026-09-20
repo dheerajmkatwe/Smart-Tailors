@@ -321,6 +321,7 @@ export default function Dashboard({ onMenuClick, auth }) {
                 localStorage.setItem('dashboard_toast_time', now.toString());
             }
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleKpiCardClick = (categoryKey) => {

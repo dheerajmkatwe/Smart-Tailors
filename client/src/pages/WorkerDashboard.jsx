@@ -26,6 +26,7 @@ export default function WorkerDashboard({ onMenuClick, auth }) {
 
     useEffect(() => {
         if (auth?.name) fetchOrders();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auth.name]);
 
     const processAndSetOrders = (data) => {
