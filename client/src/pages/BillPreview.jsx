@@ -4,6 +4,7 @@ import { Download, Share2, Printer, ChevronLeft, CheckCircle, Clock, Menu, Image
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
+import TenantUpiQRModal from '../components/TenantUpiQRModal';
 import { getOfflineOrders } from '../utils/offlineStore';
 
 function StatusBadge({ status }) {
@@ -36,6 +37,8 @@ export default function BillPreview({ onMenuClick }) {
     const [loading, setLoading] = useState(true);
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [processingRazorpay, setProcessingRazorpay] = useState(false);
+    const [showUpiModal, setShowUpiModal] = useState(false);
+
 
     useEffect(() => {
         if (orderId && orderId.toString().startsWith('offline-')) {
@@ -572,9 +575,18 @@ export default function BillPreview({ onMenuClick }) {
                                         <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8, textAlign: 'center' }}>
                                             Scan with PhonePe, GPay, or Paytm to pay
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowUpiModal(true)}
+                                            className="btn btn-outline btn-sm no-print mt-8"
+                                            style={{ fontSize: '11px', padding: '6px 12px', borderColor: 'var(--gold)', color: 'var(--maroon-dark)', fontWeight: 'bold' }}
+                                        >
+                                            📱 Open Full-Screen Scan &amp; Pay Screen
+                                        </button>
                                     </div>
                                 );
                             })()}
+
 
                             {/* Footer */}
                             <div style={{ background: 'var(--maroon-dark)', color: 'rgba(198,167,94,0.6)', textAlign: 'center', padding: '14px 20px', fontSize: 11, borderTop: '2px solid var(--gold)' }}>
@@ -716,18 +728,27 @@ export default function BillPreview({ onMenuClick }) {
                                 )}
                                 {/* Collect Balance button — Razorpay if GST+Key set, else manual */}
                                 {parseFloat(order.balance_amount) > 0 && order.status !== 'Delivered' && (
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={handleCollectBalance}
-                                        disabled={processingRazorpay || statusUpdating}
-                                        style={{ justifyContent: 'center', width: '100%', background: processingRazorpay ? undefined : 'linear-gradient(135deg,#2E7D32,#1B5E20)', borderColor: 'transparent', color: '#fff', boxShadow: '0 4px 12px rgba(46,125,50,0.25)' }}
-                                    >
-                                        {processingRazorpay ? (
-                                            <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />&nbsp;Processing...</>
-                                        ) : (
-                                            <>💳 Collect ₹{parseFloat(order.balance_amount).toLocaleString('en-IN')}</>
-                                        )}
-                                    </button>
+                                    <>
+                                        <button
+                                            className="btn btn-outline"
+                                            onClick={() => setShowUpiModal(true)}
+                                            style={{ justifyContent: 'center', width: '100%', borderColor: 'var(--gold)', color: 'var(--maroon-dark)', fontWeight: 600, background: 'rgba(212,175,55,0.08)' }}
+                                        >
+                                            📱 Accept Balance via UPI QR
+                                        </button>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleCollectBalance}
+                                            disabled={processingRazorpay || statusUpdating}
+                                            style={{ justifyContent: 'center', width: '100%', background: processingRazorpay ? undefined : 'linear-gradient(135deg,#2E7D32,#1B5E20)', borderColor: 'transparent', color: '#fff', boxShadow: '0 4px 12px rgba(46,125,50,0.25)' }}
+                                        >
+                                            {processingRazorpay ? (
+                                                <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />&nbsp;Processing...</>
+                                            ) : (
+                                                <>💳 Collect ₹{parseFloat(order.balance_amount).toLocaleString('en-IN')}</>
+                                            )}
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -753,6 +774,29 @@ export default function BillPreview({ onMenuClick }) {
         }
       `}</style>
 
+            {/* Multi-Tenant Dynamic UPI QR Payment Modal */}
+            {order && (
+                <TenantUpiQRModal
+                    isOpen={showUpiModal}
+                    onClose={() => setShowUpiModal(false)}
+                    onPaymentSuccess={async (payDetails) => {
+                        setShowUpiModal(false);
+                        try {
+                            await settleBalanceInDB();
+                            toast.success(`🎉 Balance of ₹${parseFloat(order.balance_amount).toFixed(2)} settled via UPI!`);
+                        } catch {
+                            toast.error('Failed to update balance status in database');
+                        }
+                    }}
+                    amount={parseFloat(order.balance_amount || 0)}
+                    customerName={order.customer_name}
+                    upiId={order.shop_upi || auth?.upi_id || ''}
+                    shopName={order.shop_name || auth?.shop_name || 'SMART TAILOR'}
+                    shopLogo={order.shop_logo || auth?.shop_logo || ''}
+                    note={`Balance for Order #${String(order.order_number || order.order_id).padStart(4, '0')}`}
+                />
+            )}
+
             {/* Image Preview Modal */}
             {previewImage && (
                 <div
@@ -765,3 +809,4 @@ export default function BillPreview({ onMenuClick }) {
         </div>
     );
 }
+

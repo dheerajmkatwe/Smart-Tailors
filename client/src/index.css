@@ -1939,3 +1939,16 @@ tfoot tr td {
   .ftpopup__right { width: 100%; align-items: flex-start; }
   .ftpopup__progress-track { width: 100%; }
 }
+
+/* ── Dynamic UPI QR Scanner Animations ───────────────────────────────────────── */
+@keyframes scan {
+  0% { top: 18px; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 220px; opacity: 0; }
+}
+
+@keyframes scaleUp {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

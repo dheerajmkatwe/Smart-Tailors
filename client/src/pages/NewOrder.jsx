@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import api from '../api/axios';
 import ScratchPad from '../components/ScratchPad';
+import TenantUpiQRModal from '../components/TenantUpiQRModal';
 import { saveOfflineOrder } from '../utils/offlineStore';
 
 const getAppMode = () => {
@@ -132,6 +133,7 @@ export default function NewOrder({ onMenuClick, auth }) {
     const [inlineUpi, setInlineUpi] = useState('');
     const [savingInlineUpi, setSavingInlineUpi] = useState(false);
     const [shopUpiState, setShopUpiState] = useState('');
+    const [showUpiQrModal, setShowUpiQrModal] = useState(false);
 
     const handleSaveInlineUpi = async () => {
         if (!inlineUpi.trim()) {
@@ -752,6 +754,14 @@ export default function NewOrder({ onMenuClick, auth }) {
                 }, 100);
                 return toast.error(`Enter ${missing.label}`);
             }
+        }
+
+        // Intercept UPI payments to show Dynamic QR Modal
+        const isUpiMethod = ['UPI / Dynamic QR Code', 'PhonePe', 'Google Pay', 'Paytm', 'UPI'].includes(paymentMethod);
+        if (isUpiMethod && advance > 0 && !customPaymentId && !isAdvanceVerified) {
+            setShowUpiQrModal(true);
+            submittingRef.current = false;
+            return;
         }
 
         const isOffline = !navigator.onLine;
@@ -1518,12 +1528,21 @@ export default function NewOrder({ onMenuClick, auth }) {
                                                 <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 8, textAlign: 'center', fontWeight: 500 }}>
                                                     Scan with PhonePe, GPay, Paytm, or BHIM UPI
                                                 </div>
-                                                <div style={{ fontSize: 10, color: 'var(--maroon)', marginTop: 2, textAlign: 'center' }}>
+                                                <div style={{ fontSize: 10, color: 'var(--maroon)', marginTop: 2, textAlign: 'center', marginBottom: 12 }}>
                                                     UPI ID: <strong>{shopUpi.trim()}</strong>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowUpiQrModal(true)}
+                                                    className="btn btn-maroon btn-sm"
+                                                    style={{ width: '100%', borderRadius: '8px', padding: '8px 12px', fontSize: '12px' }}
+                                                >
+                                                    📱 Open Full-Screen Scan &amp; Pay Screen
+                                                </button>
                                             </div>
                                         );
                                     })()}
+
                                 </div>
                                 <div>
                                     <div style={{ background: 'var(--ivory)', borderRadius: 10, padding: '16px 20px', border: '1px solid var(--gray-light)' }}>
@@ -1799,9 +1818,32 @@ export default function NewOrder({ onMenuClick, auth }) {
                 );
             })()}
 
+            {/* ── Multi-Tenant Dynamic UPI QR Payment Modal ── */}
+            <TenantUpiQRModal
+                isOpen={showUpiQrModal}
+                onClose={() => {
+                    setShowUpiQrModal(false);
+                    submittingRef.current = false;
+                }}
+                onPaymentSuccess={(payDetails) => {
+                    setShowUpiQrModal(false);
+                    setIsAdvanceVerified(true);
+                    const payId = `UPI_SCAN_${Date.now()}`;
+                    setVerifiedPayId(payId);
+                    handleSubmit(null, payId);
+                }}
+                amount={advance > 0 ? advance : totalAmount}
+                customerName={customer.name || 'Walk-in Customer'}
+                upiId={shopUpiState || (auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}')).upi_id || ''}
+                shopName={(auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}')).shop_name || 'SMART TAILOR'}
+                shopLogo={(auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}')).shop_logo || ''}
+                note="Order Advance Payment"
+            />
+
             <style>{`
                 @keyframes blink { 50% { opacity: 0.5; } }
             `}</style>
         </div>
     );
 }
+
