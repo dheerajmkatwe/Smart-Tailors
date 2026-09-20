@@ -150,8 +150,16 @@ async function initDB() {
         reference_image TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+      )`,
+      `CREATE TABLE IF NOT EXISTS qr_payments (
+        qr_id TEXT PRIMARY KEY,
+        status TEXT NOT NULL DEFAULT 'active',
+        amount REAL,
+        payment_id TEXT,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       )`
     ], "write");
+
     console.log('✅ Table creation successful');
 
     // Migration to remove global UNIQUE from customers.phone_number and change to composite UNIQUE(tenant_id, phone_number)

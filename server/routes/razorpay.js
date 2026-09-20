@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { db } = require('../db');
 
-// In-memory cache for QR status polling (qr_id => status object)
+// In-memory cache for fast local polling
 const qrStore = new Map();
 
 // Helper to get Razorpay instance
@@ -60,11 +61,9 @@ router.post('/create-dynamic-qr', async (req, res) => {
                 image_url: null,
                 close_by: closeBy
             };
-
-
         }
 
-        // Store initial QR status
+        // Store initial QR status in memory & DB for serverless persistence
         qrStore.set(qrCodeData.id, {
             status: 'active',
             amount: numAmount,
@@ -73,6 +72,15 @@ router.post('/create-dynamic-qr', async (req, res) => {
             payment_url: qrCodeData.payment_url,
             image_url: qrCodeData.image_url
         });
+
+        try {
+            await db.execute({
+                sql: 'INSERT INTO qr_payments (qr_id, status, amount) VALUES (?, ?, ?)',
+                args: [qrCodeData.id, 'active', numAmount]
+            });
+        } catch (dbErr) {
+            // Ignore duplicate insert errors
+        }
 
         res.json({
             success: true,
@@ -102,18 +110,35 @@ router.get('/qr-status/:qrId', async (req, res) => {
             return res.json({ status: 'paid', payment_details: cached.payment_details || {} });
         }
 
-        // Query Razorpay API if live key is configured
+        // Database check for Vercel serverless cross-instance persistence
+        try {
+            const dbRs = await db.execute({
+                sql: 'SELECT * FROM qr_payments WHERE qr_id = ? LIMIT 1',
+                args: [qrId]
+            });
+            if (dbRs.rows.length > 0 && dbRs.rows[0].status === 'paid') {
+                return res.json({ status: 'paid', payment_details: dbRs.rows[0] });
+            }
+        } catch (dbErr) {}
+
+        // Query Razorpay API directly if live key is configured
         if (process.env.RAZORPAY_KEY_ID && !qrId.startsWith('qr_test_')) {
             try {
                 const razorpay = getRazorpayInstance();
                 const fetched = await razorpay.qrCode.fetch(qrId);
-                if (fetched && (fetched.status === 'closed' || fetched.payments_amount_received > 0)) {
+                if (fetched && (fetched.status === 'closed' || (fetched.payments_amount_received && fetched.payments_amount_received > 0))) {
                     const statusObj = {
                         status: 'paid',
                         amount: (fetched.payments_amount_received || 0) / 100,
                         paidAt: new Date().toISOString()
                     };
                     qrStore.set(qrId, statusObj);
+                    try {
+                        await db.execute({
+                            sql: 'UPDATE qr_payments SET status = ? WHERE qr_id = ?',
+                            args: ['paid', qrId]
+                        });
+                    } catch (dbErr) {}
                     return res.json({ status: 'paid', payment_details: statusObj });
                 }
             } catch (fetchErr) {
@@ -131,7 +156,7 @@ router.get('/qr-status/:qrId', async (req, res) => {
  * POST /api/razorpay/webhook
  * Listens for automatic payment webhooks from Razorpay.
  */
-router.post('/webhook', (req, res) => {
+router.post('/webhook', async (req, res) => {
     try {
         const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
         if (secret) {
@@ -151,16 +176,24 @@ router.post('/webhook', (req, res) => {
             const qrEntity = payload.qr_code?.entity || payload.payment?.entity;
             const qrId = qrEntity?.id || qrEntity?.qr_code_id || payload.payment?.entity?.description;
             if (qrId) {
-                qrStore.set(qrId, {
+                const payObj = {
                     status: 'paid',
                     amount: (payload.payment?.entity?.amount || 0) / 100,
                     payment_id: payload.payment?.entity?.id,
                     paidAt: new Date().toISOString()
-                });
-                console.log(`✅ Razorpay Webhook [${event}]: Payment ${qrId} marked PAID automatically!`);
+                };
+                qrStore.set(qrId, payObj);
+
+                try {
+                    await db.execute({
+                        sql: 'UPDATE qr_payments SET status = ?, amount = ?, payment_id = ?, updated_at = datetime(\'now\', \'localtime\') WHERE qr_id = ?',
+                        args: ['paid', payObj.amount, payObj.payment_id || '', qrId]
+                    });
+                } catch (dbErr) {}
+
+                console.log(`✅ Razorpay Webhook [${event}]: Payment ${qrId} marked PAID automatically in DB!`);
             }
         }
-
 
         res.json({ status: 'ok' });
     } catch (err) {
@@ -173,7 +206,7 @@ router.post('/webhook', (req, res) => {
  * POST /api/razorpay/simulate-payment
  * Dev/Testing endpoint to instantly mark a QR as paid.
  */
-router.post('/simulate-payment', (req, res) => {
+router.post('/simulate-payment', async (req, res) => {
     const { qrId } = req.body;
     if (!qrId) return res.status(400).json({ error: 'qrId is required' });
 
@@ -182,6 +215,13 @@ router.post('/simulate-payment', (req, res) => {
         payment_id: `pay_simulated_${Date.now()}`,
         paidAt: new Date().toISOString()
     });
+
+    try {
+        await db.execute({
+            sql: 'UPDATE qr_payments SET status = ? WHERE qr_id = ?',
+            args: ['paid', qrId]
+        });
+    } catch (dbErr) {}
 
     res.json({ success: true, message: `Simulated payment recorded for ${qrId}` });
 });
