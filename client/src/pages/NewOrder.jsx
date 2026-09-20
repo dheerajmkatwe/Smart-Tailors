@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, User, Search, Menu, Image as ImageIcon, Camera, X, Mic, Square, PenTool, FolderOpen, Save, Ruler } from 'lucide-react';
+import { Plus, Trash2, User, Search, Menu, Image as ImageIcon, Camera, X, Mic, Square, PenTool, FolderOpen, Save, Ruler, Scissors, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import api from '../api/axios';
