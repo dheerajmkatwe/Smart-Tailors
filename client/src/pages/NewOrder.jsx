@@ -1828,13 +1828,18 @@ export default function NewOrder({ onMenuClick, auth }) {
                     setShowUpiQrModal(false);
                     submittingRef.current = false;
                 }}
-                onPaymentSuccess={(payDetails) => {
+                onPaymentSuccess={async (payDetails) => {
                     setShowUpiQrModal(false);
                     setIsAdvanceVerified(true);
-                    const payId = `UPI_SCAN_${Date.now()}`;
+                    const payId = payDetails?.payment_id || `UPI_SCAN_${Date.now()}`;
                     setVerifiedPayId(payId);
-                    handleSubmit(null, payId);
+                    submittingRef.current = false; // Reset submitting guard
+                    toast.success('⚡ Payment verified! Creating order & bill...');
+                    setTimeout(() => {
+                        handleSubmit(null, payId);
+                    }, 100);
                 }}
+
                 amount={advance > 0 ? advance : totalAmount}
                 customerName={customer.name || 'Walk-in Customer'}
                 upiId={shopUpiState || (auth || JSON.parse(localStorage.getItem('tailor_auth') || '{}')).upi_id || ''}
