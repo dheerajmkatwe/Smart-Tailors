@@ -1542,7 +1542,19 @@ export default function NewOrder({ onMenuClick, auth }) {
                                                 >
                                                     📱 Open Full-Screen Scan &amp; Pay Screen
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        setIsAdvanceVerified(true);
+                                                        handleSubmit(e, `UPI_DIRECT_${Date.now()}`);
+                                                    }}
+                                                    className="btn btn-sm"
+                                                    style={{ width: '100%', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', marginTop: '8px', backgroundColor: '#2E7D32', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    ⚡ Confirm Payment &amp; Create Bill
+                                                </button>
                                             </div>
+
                                         );
                                     })()}
 

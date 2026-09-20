@@ -457,8 +457,9 @@ export default function TenantUpiQRModal({
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <Sparkles size={18} /> Test Auto-Payment Verification (Simulate)
+                                    <CheckCircle2 size={18} /> ⚡ Confirm Payment Received &amp; Create Bill
                                 </button>
+
                             </div>
                         </div>
                     )}

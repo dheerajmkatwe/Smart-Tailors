@@ -6,8 +6,11 @@ require('dotenv').config();
 // If it's empty, we use a local file
 // For local development, use a simple file name
 // For cloud, use the full libsql:// URL
-const url = process.env.DATABASE_URL || "file:./lm_tailor.db";
+const defaultDbPath = 'file:' + path.join(__dirname, 'lm_tailor.db');
+const url = process.env.DATABASE_URL || defaultDbPath;
 const isLocal = url.startsWith('file:');
+
+
 
 console.log('🔗 Connecting to:', url);
 
