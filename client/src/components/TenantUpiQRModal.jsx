@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { X, CheckCircle2, AlertCircle, RefreshCw, Smartphone, ShieldCheck, Sparkles, Store, CreditCard, ArrowRight } from 'lucide-react';
+import { generateUpiUri } from '../utils/upiHelper';
 
 export default function TenantUpiQRModal({
     isOpen,
@@ -73,11 +74,14 @@ export default function TenantUpiQRModal({
         }
     };
 
-    // Construct UPI Deep Link URI
-    // Format: upi://pay?pa=ADDRESS&pn=NAME&am=AMOUNT&tn=NOTE&cu=INR
-    const encodedShopName = encodeURIComponent(shopName || 'Smart Tailors Boutique');
-    const encodedNote = encodeURIComponent(`${note}${orderId ? ` #${orderId}` : ''}`);
-    const upiUri = `upi://pay?pa=${activeUpi}&pn=${encodedShopName}&am=${Number(amount).toFixed(2)}&tn=${encodedNote}&cu=INR`;
+    // Construct NPCI-compliant UPI Deep Link URI
+    const upiUri = generateUpiUri({
+        upiId: activeUpi,
+        shopName: shopName || 'Boutique',
+        amount: amount,
+        note: note || 'Order Payment'
+    });
+
 
     return (
         <div style={{

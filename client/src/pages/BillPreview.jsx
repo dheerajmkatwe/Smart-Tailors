@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import TenantUpiQRModal from '../components/TenantUpiQRModal';
 import { getOfflineOrders } from '../utils/offlineStore';
+import { generateUpiUri } from '../utils/upiHelper';
+
 
 function StatusBadge({ status }) {
     const cls = { Pending: 'badge badge-pending', Ready: 'badge badge-ready', Delivered: 'badge badge-delivered' }[status] || 'badge';
@@ -567,10 +569,11 @@ export default function BillPreview({ onMenuClick }) {
                                         </div>
                                         <div style={{ background: '#fff', padding: 8, borderRadius: 8, border: '1px solid var(--gray-light)' }}>
                                             <QRCode 
-                                                value={`upi://pay?pa=${shopUpi}&pn=${encodeURIComponent(shopName)}&am=${parseFloat(order.balance_amount).toFixed(2)}&cu=INR`} 
+                                                value={generateUpiUri({ upiId: shopUpi, shopName: shopName, amount: order.balance_amount, note: 'Balance Payment' })} 
                                                 size={100} 
                                                 level="L" 
                                             />
+
                                         </div>
                                         <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 8, textAlign: 'center' }}>
                                             Scan with PhonePe, GPay, or Paytm to pay

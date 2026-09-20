@@ -7,6 +7,8 @@ import api from '../api/axios';
 import ScratchPad from '../components/ScratchPad';
 import TenantUpiQRModal from '../components/TenantUpiQRModal';
 import { saveOfflineOrder } from '../utils/offlineStore';
+import { generateUpiUri } from '../utils/upiHelper';
+
 
 const getAppMode = () => {
     try { return localStorage.getItem('tailor_active_mode') || 'LADIES'; } catch { return 'LADIES'; }
@@ -1521,10 +1523,11 @@ export default function NewOrder({ onMenuClick, auth }) {
                                                     Scan to Pay Amount: <span style={{ color: '#2E7D32' }}>{`\u20b9${qrAmount.toFixed(2)}`}</span>
                                                 </div>
                                                 <QRCode 
-                                                    value={`upi://pay?pa=${shopUpi.trim()}&pn=${encodeURIComponent(shopName)}&am=${qrAmount.toFixed(2)}&cu=INR`} 
+                                                    value={generateUpiUri({ upiId: shopUpi, shopName: shopName, amount: qrAmount, note: 'Advance Payment' })} 
                                                     size={130} 
                                                     level="L" 
                                                 />
+
                                                 <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 8, textAlign: 'center', fontWeight: 500 }}>
                                                     Scan with PhonePe, GPay, Paytm, or BHIM UPI
                                                 </div>
