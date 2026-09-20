@@ -27,6 +27,7 @@ export function generateUpiUri({ upiId, shopName, amount, note }) {
 
     const formattedAmount = Number(amount || 0).toFixed(2);
 
-    // NPCI standard UPI format: upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...
-    return `upi://pay?pa=${cleanUpi}&pn=${cleanName}&am=${formattedAmount}&cu=INR&tn=${cleanNote}`;
+    // NPCI standard UPI format for dynamic QR codes: upi://pay?pa=...&pn=...&am=...&cu=INR&mode=02&purpose=00&tn=...
+    return `upi://pay?pa=${cleanUpi}&pn=${cleanName}&am=${formattedAmount}&cu=INR&mode=02&purpose=00&tn=${cleanNote}`;
 }
+

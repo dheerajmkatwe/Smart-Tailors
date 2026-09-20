@@ -152,7 +152,8 @@ export default function TenantUpiQRModal({
         note: note || 'Order Payment'
     });
 
-    const activeQrValue = razorpayUpiUri || fallbackUpiUri;
+    const activeQrValue = (activeUpi && activeUpi.trim()) ? fallbackUpiUri : (razorpayUpiUri || fallbackUpiUri);
+
 
     return (
         <div style={{

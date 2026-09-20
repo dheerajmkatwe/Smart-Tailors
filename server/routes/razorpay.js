@@ -49,14 +49,17 @@ router.post('/create-dynamic-qr', async (req, res) => {
             console.warn('⚠️ Razorpay SDK QR creation fallback (Test/Local Mode):', sdkErr.message);
             // Fallback for test mode or invalid keys
             const dummyId = `qr_test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const cleanShopName = (shopName || 'Boutique').replace(/[^a-zA-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+            const cleanNote = (note || 'Order Payment').replace(/[^a-zA-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
             qrCodeData = {
                 id: dummyId,
                 entity: 'qr_code',
                 status: 'active',
-                payment_url: `upi://pay?pa=9113565802@ibl&pn=${encodeURIComponent(shopName || 'Boutique')}&am=${numAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(note || 'Order Payment')}`,
+                payment_url: `upi://pay?pa=9113565802@ibl&pn=${cleanShopName}&am=${numAmount.toFixed(2)}&cu=INR&mode=02&purpose=00&tn=${cleanNote}`,
                 image_url: null,
                 close_by: closeBy
             };
+
         }
 
         // Store initial QR status
