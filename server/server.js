@@ -15,8 +15,10 @@ const pdfRouter = require('./routes/pdf');
 const analyticsRouter = require('./routes/analytics');
 const alterationsRouter = require('./routes/alterations');
 const trackRouter = require('./routes/track');
+const razorpayRouter = require('./routes/razorpay');
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
 // ─── Middleware ───────────────────────────────────
@@ -55,6 +57,8 @@ app.use('/api/pdf', pdfRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/alterations', alterationsRouter);
 app.use('/api/track', trackRouter); // Public — no auth required
+app.use('/api/razorpay', razorpayRouter);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
