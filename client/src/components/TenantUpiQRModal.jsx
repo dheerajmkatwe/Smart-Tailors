@@ -70,7 +70,8 @@ export default function TenantUpiQRModal({
                                 upiId: activeUpi || 'razorpay_qr',
                                 amount: amount,
                                 confirmedAt: new Date().toISOString(),
-                                qrId: qrId
+                                qrId: qrId,
+                                payment_id: res.data?.payment_id || `RZP_QR_${qrId}`
                             });
                         }, 1800);
                     }
@@ -115,7 +116,8 @@ export default function TenantUpiQRModal({
                     paymentMethod: 'UPI',
                     upiId: activeUpi || 'razorpay_qr',
                     amount: amount,
-                    confirmedAt: new Date().toISOString()
+                    confirmedAt: new Date().toISOString(),
+                    payment_id: `UPI_CONFIRMED_${Date.now()}`
                 });
             }, 1800);
         }, 1000);
