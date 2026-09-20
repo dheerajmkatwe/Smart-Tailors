@@ -51,14 +51,16 @@ router.post('/create-dynamic-qr', async (req, res) => {
             const dummyId = `qr_test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
             const cleanShopName = (shopName || 'Boutique').replace(/[^a-zA-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
             const cleanNote = (note || 'Order Payment').replace(/[^a-zA-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+            const trId = `TR${Date.now()}`;
             qrCodeData = {
                 id: dummyId,
                 entity: 'qr_code',
                 status: 'active',
-                payment_url: `upi://pay?pa=9113565802@ibl&pn=${cleanShopName}&am=${numAmount.toFixed(2)}&cu=INR&mode=02&purpose=00&tn=${cleanNote}`,
+                payment_url: `upi://pay?pa=9113565802@ibl&pn=${cleanShopName}&am=${numAmount.toFixed(2)}&cu=INR&tn=${cleanNote}&tr=${trId}`,
                 image_url: null,
                 close_by: closeBy
             };
+
 
         }
 
