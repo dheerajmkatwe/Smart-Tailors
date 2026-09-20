@@ -142,9 +142,9 @@ router.post('/webhook', (req, res) => {
         const event = req.body.event;
         const payload = req.body.payload;
 
-        if (event === 'qr_code.credited' || event === 'payment.captured') {
+        if (event === 'payment.captured' || event === 'payment.authorized' || event === 'qr_code.credited' || event === 'order.paid') {
             const qrEntity = payload.qr_code?.entity || payload.payment?.entity;
-            const qrId = qrEntity?.id || qrEntity?.qr_code_id;
+            const qrId = qrEntity?.id || qrEntity?.qr_code_id || payload.payment?.entity?.description;
             if (qrId) {
                 qrStore.set(qrId, {
                     status: 'paid',
@@ -152,9 +152,10 @@ router.post('/webhook', (req, res) => {
                     payment_id: payload.payment?.entity?.id,
                     paidAt: new Date().toISOString()
                 });
-                console.log(`✅ Razorpay Webhook: QR Code ${qrId} marked PAID automatically!`);
+                console.log(`✅ Razorpay Webhook [${event}]: Payment ${qrId} marked PAID automatically!`);
             }
         }
+
 
         res.json({ status: 'ok' });
     } catch (err) {
