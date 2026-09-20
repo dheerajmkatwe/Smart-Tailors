@@ -3,7 +3,8 @@ import QRCode from 'react-qr-code';
 import { X, CheckCircle2, AlertCircle, RefreshCw, Smartphone, ShieldCheck, Sparkles, Store, CreditCard, ArrowRight, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
-import { generateUpiUri } from '../utils/upiHelper';
+import { generateUpiUri, generateDynamicUpiUri } from '../utils/upiHelper';
+
 
 export default function TenantUpiQRModal({
     isOpen,
@@ -144,15 +145,24 @@ export default function TenantUpiQRModal({
         }
     };
 
-    // Construct NPCI-compliant direct UPI URI (fallback or primary)
-    const fallbackUpiUri = generateUpiUri({
+    // Construct clean NPCI UPI URI (scannable without amount error on PhonePe/GPay)
+    const cleanUpiUri = generateUpiUri({
         upiId: activeUpi,
         shopName: shopName || 'Boutique',
         amount: amount,
         note: note || 'Order Payment'
     });
 
-    const activeQrValue = (activeUpi && activeUpi.trim()) ? fallbackUpiUri : (razorpayUpiUri || fallbackUpiUri);
+    // Construct dynamic UPI URI (with amount for direct deep link tap)
+    const dynamicUpiUri = generateDynamicUpiUri({
+        upiId: activeUpi,
+        shopName: shopName || 'Boutique',
+        amount: amount,
+        note: note || 'Order Payment'
+    });
+
+    const activeQrValue = razorpayUpiUri || cleanUpiUri;
+
 
 
     return (
@@ -365,6 +375,32 @@ export default function TenantUpiQRModal({
                                     <CreditCard size={14} style={{ color: '#C6A75E' }} /> Payee UPI: <strong style={{ color: '#4A101C' }}>{activeUpi || 'Boutique UPI'}</strong>
                                 </div>
                             </div>
+
+                            {/* Direct Mobile App Pay Button (For users on phone) */}
+                            {dynamicUpiUri && (
+                                <a
+                                    href={dynamicUpiUri}
+                                    style={{
+                                        marginTop: '14px',
+                                        width: '100%',
+                                        background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                                        color: '#ffffff',
+                                        padding: '12px 16px',
+                                        borderRadius: '12px',
+                                        textDecoration: 'none',
+                                        fontWeight: '700',
+                                        fontSize: '14px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                                    }}
+                                >
+                                    <Smartphone size={18} /> Tap to Open PhonePe / GPay / Paytm (₹{amount})
+                                </a>
+                            )}
+
 
                             {/* Supported UPI Apps Pills */}
                             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
